@@ -32,14 +32,36 @@
 #endif
 
 class ShenandoahMemoryPool : public CollectedMemoryPool {
-private:
+protected:
    ShenandoahHeap* _heap;
 
 public:
-  ShenandoahMemoryPool(ShenandoahHeap* pool);
+  ShenandoahMemoryPool(ShenandoahHeap* pool,
+                      const char* name);
+};
+
+class ShenandoahGlobalMemoryPool : public ShenandoahMemoryPool {
+public:
+  ShenandoahGlobalMemoryPool(ShenandoahHeap* pool);
   MemoryUsage get_memory_usage();
-  size_t used_in_bytes()              { return _heap->used(); }
-  size_t max_size() const             { return _heap->max_capacity(); }
+  size_t used_in_bytes();
+  size_t max_size() const;
+};
+
+class ShenandoahYoungGenMemoryPool : public ShenandoahMemoryPool {
+public:
+  ShenandoahYoungGenMemoryPool(ShenandoahHeap* pool);
+  MemoryUsage get_memory_usage();
+  size_t used_in_bytes();
+  size_t max_size() const;
+};
+
+class ShenandoahOldGenMemoryPool : public ShenandoahMemoryPool {
+public:
+  ShenandoahOldGenMemoryPool(ShenandoahHeap* pool);
+  MemoryUsage get_memory_usage();
+  size_t used_in_bytes();
+  size_t max_size() const;
 };
 
 #endif // SHARE_GC_SHENANDOAH_SHENANDOAHMEMORYPOOL_HPP
