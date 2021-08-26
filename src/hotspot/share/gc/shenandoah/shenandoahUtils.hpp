@@ -30,6 +30,7 @@
 #include "gc/shared/gcVMOperations.hpp"
 #include "gc/shared/isGCActiveMark.hpp"
 #include "gc/shared/suspendibleThreadSet.hpp"
+#include "gc/shenandoah/shenandoahMonitoringSupport.hpp"
 #include "gc/shenandoah/shenandoahPhaseTimings.hpp"
 #include "gc/shenandoah/shenandoahThreadLocalData.hpp"
 #include "jfr/jfrEvents.hpp"
@@ -50,6 +51,8 @@ private:
   GCTracer* const _tracer;
 
   TraceMemoryManagerStats _trace_cycle;
+  TraceMemoryManagerStats _trace_stats;
+
 public:
   ShenandoahGCSession(GCCause::Cause cause, ShenandoahGeneration* generation);
   ~ShenandoahGCSession();

@@ -103,3 +103,16 @@ void ShenandoahMonitoringSupport::update_counters() {
     MetaspaceCounters::update_performance_counters();
   }
 }
+
+ShenandoahMonitoringScope::ShenandoahMonitoringScope(GCMemoryManager* gc_memory_manager,
+                            GCCause::Cause cause) :
+  _tms(gc_memory_manager, cause,
+      /* allMemoryPoolsAffected */    true,
+      /* recordGCBeginTime = */       true,
+      /* recordPreGCUsage = */        true,
+      /* recordPeakUsage = */         true,
+      /* recordPostGCUsage = */       true,
+      /* recordAccumulatedGCTime = */ true,
+      /* recordGCEndTime = */         true,
+      /* countCollection = */         true) 
+      {}

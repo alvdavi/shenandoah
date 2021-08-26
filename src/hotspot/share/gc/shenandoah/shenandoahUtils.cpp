@@ -64,6 +64,24 @@ ShenandoahGCSession::ShenandoahGCSession(GCCause::Cause cause, ShenandoahGenerat
           /* recordGCEndTime = */         true,
           /* countCollection = */         true
   );
+  GCMemoryManager* mm;
+  if (_heap->mode()->is_generational() && _generation->generation_mode() != GLOBAL) {
+    mm = _generation->generation_mode() == YOUNG ?
+         _heap->young_gen_memory_manager() :
+         _heap->old_gen_memory_manager();
+  } else {
+    mm = _heap->memory_manager();;
+  }
+  _trace_stats.initialize(mm, cause,
+          /* allMemoryPoolsAffected */    true,
+          /* recordGCBeginTime = */       true,
+          /* recordPreGCUsage = */        true,
+          /* recordPeakUsage = */         true,
+          /* recordPostGCUsage = */       true,
+          /* recordAccumulatedGCTime = */ true,
+          /* recordGCEndTime = */         true,
+          /* countCollection = */         true
+  );
 }
 
 
@@ -75,6 +93,9 @@ ShenandoahGCSession::~ShenandoahGCSession() {
   _tracer->report_gc_end(_timer->gc_end(), _timer->time_partitions());
   assert(!ShenandoahGCPhase::is_current_phase_valid(), "No current GC phase");
   _heap->set_gc_cause(GCCause::_no_gc);
+  // if (_heap->mode()->is_generational()) {
+  //   delete _gen_monitoring_scope;
+  // }
 }
 
 ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type) :

@@ -26,6 +26,9 @@
 #define SHARE_GC_SHENANDOAH_SHENANDOAHMONITORINGSUPPORT_HPP
 
 #include "memory/allocation.hpp"
+#include "services/memoryService.hpp"
+
+
 
 class GenerationCounters;
 class HSpaceCounters;
@@ -52,6 +55,15 @@ public:
  CollectorCounters* concurrent_collection_counters();
  CollectorCounters* partial_collection_counters();
  void update_counters();
+};
+
+// Scope object for java.lang.management support.
+class ShenandoahMonitoringScope {
+private:
+  TraceMemoryManagerStats _tms;
+public:
+  ShenandoahMonitoringScope(GCMemoryManager* gc_memory_manager,
+                            GCCause::Cause cause);
 };
 
 #endif // SHARE_GC_SHENANDOAH_SHENANDOAHMONITORINGSUPPORT_HPP
