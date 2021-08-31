@@ -31,6 +31,7 @@
 #include "oops/oopsHierarchy.hpp"
 #include "runtime/handles.hpp"
 #include "runtime/timer.hpp"
+#include "services/management.hpp"
 #include "services/memoryUsage.hpp"
 
 // A memory manager is responsible for managing one or more memory pools.
@@ -158,8 +159,11 @@ public:
   void   initialize_gc_stat_info();
 
   bool   is_gc_memory_manager()         { return true; }
-  jlong  gc_time_ms()                   { return _accumulated_timer.milliseconds(); }
-  size_t gc_count()                     { return _num_collections; }
+  virtual jlong  gc_time_ms()           { return _accumulated_timer.milliseconds(); }
+  size_t gc_count()             { return _num_collections; }
+  virtual jlong  gc_time_ns()           { return (jlong)(_accumulated_timer.seconds() * NANOUNITS); }
+  virtual jlong  gc_running_time_ns()   { return (jlong)(_accumulated_timer.seconds() * NANOUNITS); }       
+  virtual size_t gc_pause_count()       { return _num_collections; }
   int    num_gc_threads()               { return _num_gc_threads; }
   void   set_num_gc_threads(int count)  { _num_gc_threads = count; }
 
@@ -169,7 +173,7 @@ public:
                 bool recordGCEndTime, bool countCollection, GCCause::Cause cause,
                 bool allMemoryPoolsAffected);
 
-  void        reset_gc_stat()   { _num_collections = 0; _accumulated_timer.reset(); }
+  virtual void   reset_gc_stat();
 
   // Copy out _last_gc_stat to the given destination, returning
   // the collection count. Zero signifies no gc has taken place.
@@ -177,6 +181,24 @@ public:
 
   void set_notification_enabled(bool enabled) { _notification_enabled = enabled; }
   bool is_notification_enabled() { return _notification_enabled; }
+};
+
+class ConcurrentGCMemoryManager : public GCMemoryManager {
+private:
+  size_t       _num_pauses;
+  elapsedTimer _accumulated_pause_timer;
+public:
+  ConcurrentGCMemoryManager(const char* name, const char* gc_end_message);
+
+  jlong gc_time_ms() override         { return _accumulated_pause_timer.milliseconds(); }
+  jlong gc_time_ns() override          { return (jlong)(_accumulated_pause_timer.seconds() * NANOUNITS); }
+  size_t gc_pause_count() override    { return _num_pauses; }
+
+  void   pause_begin(bool recordAccumulatedPauseTime, bool countPauses);
+
+  void   pause_end(bool recordAccumulatedPauseTime, bool countPauses);
+
+  virtual void   reset_gc_stat() override;
 };
 
 #endif // SHARE_SERVICES_MEMORYMANAGER_HPP

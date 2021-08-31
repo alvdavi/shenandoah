@@ -2601,6 +2601,22 @@ void ShenandoahHeap::initialize_serviceability() {
   }
 }
 
+ConcurrentGCMemoryManager* ShenandoahHeap::memory_manager(GenerationMode generation_mode) {
+  if (_gc_mode->is_generational()) {
+    switch (generation_mode) {
+      case YOUNG:
+        return _young_gen_memory_manager;
+      case OLD:
+        return _old_gen_memory_manager;
+      case GLOBAL:
+      default:
+        return _memory_manager;
+    }
+  }
+  return _memory_manager;
+}
+
+
 GrowableArray<GCMemoryManager*> ShenandoahHeap::memory_managers() {
   GrowableArray<GCMemoryManager*> memory_managers(2);
   memory_managers.append(&_cycle_memory_manager);

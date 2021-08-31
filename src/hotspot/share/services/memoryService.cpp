@@ -264,3 +264,23 @@ TraceMemoryManagerStats::~TraceMemoryManagerStats() {
   MemoryService::gc_end(_gc_memory_manager, _recordPostGCUsage, _recordAccumulatedGCTime,
                         _recordGCEndTime, _countCollection, _cause, _allMemoryPoolsAffected);
 }
+
+TraceMemoryManagerPauseStats::TraceMemoryManagerPauseStats(ConcurrentGCMemoryManager* gc_memory_manager,
+                        bool recordAccumulatedPauseTime,
+                        bool countPauses) {
+  initialize(gc_memory_manager, recordAccumulatedPauseTime, countPauses);
+}
+
+void TraceMemoryManagerPauseStats::initialize(ConcurrentGCMemoryManager* gc_memory_manager,
+                        bool recordAccumulatedPauseTime,
+                        bool countPauses) {
+  _gc_memory_manager = gc_memory_manager;
+  _recordAccumulatedPauseTime = recordAccumulatedPauseTime;
+  _countPauses = countPauses;
+  _gc_memory_manager->pause_begin(_recordAccumulatedPauseTime, _countPauses);
+}
+
+TraceMemoryManagerPauseStats::~TraceMemoryManagerPauseStats() {
+  _gc_memory_manager->pause_end(_recordAccumulatedPauseTime, _countPauses);
+}
+

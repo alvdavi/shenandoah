@@ -138,9 +138,11 @@ private:
   const SvcGCMarker             _svc_gc_mark;
   const IsGCActiveMark          _is_gc_active_mark;
   TraceMemoryManagerStats       _trace_pause;
+  TraceMemoryManagerPauseStats  _trace_gc_pause_stats;
 
 public:
-  ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type);
+  ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type,
+                        GenerationMode generation_mode);
 };
 
 class ShenandoahSafepoint : public AllStatic {

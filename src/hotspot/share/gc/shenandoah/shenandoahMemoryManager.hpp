@@ -30,7 +30,7 @@
 
 //class ShenandoahHeap;
 
-class ShenandoahMemoryManager : public GCMemoryManager {
+class ShenandoahMemoryManager : public ConcurrentGCMemoryManager {
 protected:
    ShenandoahHeap* _heap;
 

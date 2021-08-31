@@ -64,15 +64,7 @@ ShenandoahGCSession::ShenandoahGCSession(GCCause::Cause cause, ShenandoahGenerat
           /* recordGCEndTime = */         true,
           /* countCollection = */         true
   );
-  GCMemoryManager* mm;
-  if (_heap->mode()->is_generational() && _generation->generation_mode() != GLOBAL) {
-    mm = _generation->generation_mode() == YOUNG ?
-         _heap->young_gen_memory_manager() :
-         _heap->old_gen_memory_manager();
-  } else {
-    mm = _heap->memory_manager();;
-  }
-  _trace_stats.initialize(mm, cause,
+  _trace_stats.initialize(_heap->memory_manager(generation->generation_mode()), cause,
           /* allMemoryPoolsAffected */    true,
           /* recordGCBeginTime = */       true,
           /* recordPreGCUsage = */        true,
@@ -98,7 +90,7 @@ ShenandoahGCSession::~ShenandoahGCSession() {
   // }
 }
 
-ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type) :
+ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type, GenerationMode generation_mode) :
   _heap(ShenandoahHeap::heap()), _gc_id_mark(gc_id), _svc_gc_mark(type), _is_gc_active_mark() {
   _trace_pause.initialize(_heap->stw_memory_manager(), _heap->gc_cause(),
           /* allMemoryPoolsAffected */    true,
@@ -110,6 +102,9 @@ ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_typ
           /* recordGCEndTime = */         true,
           /* countCollection = */         true
   );
+  _trace_gc_pause_stats.initialize(_heap->memory_manager(generation_mode), 
+          /* recordAccumulatedGCTime = */ true,
+          /* countPauses = */             true);
 }
 
 ShenandoahPausePhase::ShenandoahPausePhase(const char* title, ShenandoahPhaseTimings::Phase phase, bool log_heap_usage) :

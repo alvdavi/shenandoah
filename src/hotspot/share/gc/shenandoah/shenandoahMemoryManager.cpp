@@ -29,8 +29,8 @@
 ShenandoahMemoryManager::ShenandoahMemoryManager(ShenandoahHeap* heap,
                                                  const char* name,
                                                  const char* gc_end_message) :
-        GCMemoryManager(name, gc_end_message),
-                        _heap(heap) {}
+        ConcurrentGCMemoryManager(name, gc_end_message),
+                                 _heap(heap) {}
 
 ShenandoahGlobalMemoryManager::ShenandoahGlobalMemoryManager(ShenandoahHeap* heap) :
         ShenandoahMemoryManager(heap, "Shenandoah Global", "end of global collection") {}

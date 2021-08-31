@@ -39,3 +39,24 @@ JNIEXPORT void JNICALL Java_com_sun_management_internal_GarbageCollectorExtImpl_
       jmm_interface->SetGCNotificationEnabled(env, gc, enabled);
     }
 }
+
+JNIEXPORT jlong JNICALL Java_com_sun_management_internal_GarbageCollectorExtImpl_getRunningTimeNanos
+  (JNIEnv *env, jobject mgr) {
+  return jmm_interface->GetLongAttribute(env, mgr, JMM_GC_RUNNING_TIME_NS);
+}
+
+JNIEXPORT jlong JNICALL Java_com_sun_management_internal_GarbageCollectorExtImpl_getPauseTimeNanos
+  (JNIEnv *env, jobject mgr) {
+  return jmm_interface->GetLongAttribute(env, mgr, JMM_GC_TIME_NS);
+}
+
+JNIEXPORT jlong JNICALL Java_com_sun_management_internal_GarbageCollectorExtImpl_getPauseCount
+  (JNIEnv *env, jobject mgr) {
+  return jmm_interface->GetLongAttribute(env, mgr, JMM_GC_PAUSE_COUNT);
+}
+
+JNIEXPORT jlong JNICALL Java_com_sun_management_internal_GarbageCollectorExtImpl_getGarbageCollectorThreadCount
+(JNIEnv *env, jobject mgr) {
+    return jmm_interface->GetLongAttribute(env, mgr, JMM_GC_THREADS);    
+}
+

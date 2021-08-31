@@ -277,6 +277,7 @@ void GCMemoryManager::gc_end(bool recordPostGCUsage,
 
   if (countCollection) {
     _num_collections++;
+
     // alternately update two objects making one public when complete
     {
       MutexLocker ml(_last_gc_lock, Mutex::_no_safepoint_check_flag);
@@ -293,6 +294,11 @@ void GCMemoryManager::gc_end(bool recordPostGCUsage,
   }
 }
 
+void GCMemoryManager::reset_gc_stat() {
+  _num_collections = 0;
+  _accumulated_timer.reset();
+}
+
 size_t GCMemoryManager::get_last_gc_stat(GCStatInfo* dest) {
   MutexLocker ml(_last_gc_lock, Mutex::_no_safepoint_check_flag);
   if (_last_gc_stat->gc_index() != 0) {
@@ -306,4 +312,31 @@ size_t GCMemoryManager::get_last_gc_stat(GCStatInfo* dest) {
     memcpy(dest->after_gc_usage_array(), _last_gc_stat->after_gc_usage_array(), len);
   }
   return _last_gc_stat->gc_index();
+}
+
+ConcurrentGCMemoryManager::ConcurrentGCMemoryManager(const char* name, const char* gc_end_message) :
+  GCMemoryManager(name, gc_end_message) {
+  _num_pauses = 0;
+  _accumulated_pause_timer.reset();
+}
+
+void ConcurrentGCMemoryManager::pause_begin(bool recordAccumulatedPauseTime, bool countPauses) {
+  if (recordAccumulatedPauseTime) {
+    _accumulated_pause_timer.start();
+  }
+}
+
+void ConcurrentGCMemoryManager::pause_end(bool recordAccumulatedPauseTime, bool countPauses) {
+  if (countPauses) {
+    _num_pauses++;
+  }
+  if (recordAccumulatedPauseTime) {
+    _accumulated_pause_timer.stop();
+  }
+}
+
+void ConcurrentGCMemoryManager::reset_gc_stat() {
+  GCMemoryManager::reset_gc_stat();
+  _num_pauses = 0;
+  _accumulated_pause_timer.reset();
 }

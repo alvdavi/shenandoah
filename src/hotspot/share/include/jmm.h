@@ -26,6 +26,7 @@
 #ifndef _JAVA_JMM_H_
 #define _JAVA_JMM_H_
 
+
 /*
  * This is a private interface used by JDK for JVM monitoring
  * and management.
@@ -36,6 +37,7 @@
  *
  * 2. There is a change in the contract between VM and Java classes.
  */
+
 
 #include "jni.h"
 
@@ -80,6 +82,17 @@ typedef enum {
   JMM_GC_TIME_MS                     = 9,    /* Total accumulated time spent in collection */
   JMM_GC_COUNT                       = 10,   /* Total number of collections */
   JMM_JVM_UPTIME_MS                  = 11,   /* The JVM uptime in milliseconds */
+
+  /************************************
+   * Shenandoah metrics changes begin *
+   ************************************/
+  JMM_GC_TIME_NS                     = 12,   /* Total accumulated time spent in collection (nanos) */
+  JMM_GC_PAUSE_COUNT                 = 13,   /* Total number of stop the world pauses */
+  JMM_GC_RUNNING_TIME_NS             = 14,   /* Total accumulated time spent in pauses (nanos) */
+  JMM_GC_THREADS                     = 15,   /* Total number of threads for the garbage collector */
+  /***********************************
+   * Shenandoah metrics changes ends *
+   ***********************************/
 
   JMM_INTERNAL_ATTRIBUTE_INDEX       = 100,
   JMM_CLASS_LOADED_BYTES             = 101,  /* Number of bytes loaded instance classes */
@@ -345,5 +358,6 @@ typedef struct jmmInterface_1_ {
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
+
 
 #endif /* !_JAVA_JMM_H_ */

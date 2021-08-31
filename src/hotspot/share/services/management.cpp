@@ -804,7 +804,37 @@ JVM_ENTRY(jboolean, jmm_SetBoolAttribute(JNIEnv *env, jmmBoolAttribute att, jboo
   }
 JVM_END
 
+#if INCLUDE_SHENANDOAHGC
+static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
+  switch (att) {
+  case JMM_GC_TIME_MS:
+    return mgr->gc_time_ms();
 
+  case JMM_GC_COUNT:
+    return mgr->gc_count();
+  
+  case JMM_GC_TIME_NS:
+    return mgr->gc_time_ns();
+  
+  case JMM_GC_PAUSE_COUNT:
+    return mgr->gc_pause_count();
+  
+  case JMM_GC_RUNNING_TIME_NS:
+    return mgr->gc_running_time_ns();
+  
+  case JMM_GC_THREADS:
+    return mgr->num_gc_threads();
+
+  case JMM_GC_EXT_ATTRIBUTE_INFO_SIZE:
+    // current implementation only has 1 ext attribute
+    return 1;
+
+  default:
+    assert(0, "Unrecognized GC attribute");
+    return -1;
+  }
+}
+#else
 static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
   switch (att) {
   case JMM_GC_TIME_MS:
@@ -822,6 +852,7 @@ static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
     return -1;
   }
 }
+#endif // INCLUDE_SHENANDOAHGC
 
 class VmThreadCountClosure: public ThreadClosure {
  private:
@@ -2063,6 +2094,12 @@ jlong Management::ticks_to_ms(jlong ticks) {
   return (jlong)(((double)ticks / (double)os::elapsed_frequency())
                  * (double)1000.0);
 }
+
+jlong Management::ticks_to_ns(jlong ticks) {
+  assert(os::elapsed_frequency() > 0, "Must be non-zero");
+  return (jlong)(((double)ticks / (double)os::elapsed_frequency())
+                 * (double)1000000000.0);
+}
 #endif // INCLUDE_MANAGEMENT
 
 // Gets the amount of memory allocated on the Java heap for a single thread.
@@ -2196,7 +2233,6 @@ JVM_ENTRY(void, jmm_GetThreadCpuTimesWithKind(JNIEnv *env, jlongArray ids,
     }
   }
 JVM_END
-
 
 
 #if INCLUDE_MANAGEMENT

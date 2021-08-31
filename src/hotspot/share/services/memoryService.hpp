@@ -36,6 +36,7 @@
 class MemoryPool;
 class MemoryManager;
 class GCMemoryManager;
+class ConcurrentGCMemoryManager;
 class CollectedHeap;
 class CodeHeap;
 
@@ -150,6 +151,24 @@ public:
                   bool countCollection);
 
   ~TraceMemoryManagerStats();
+};
+
+class TraceMemoryManagerPauseStats : public StackObj {
+private:
+  ConcurrentGCMemoryManager* _gc_memory_manager;
+  bool                       _recordAccumulatedPauseTime;
+  bool                       _countPauses;
+public:
+  TraceMemoryManagerPauseStats() {}
+  TraceMemoryManagerPauseStats(ConcurrentGCMemoryManager* gc_memory_manager,
+                          bool _recordAccumulatedPauseTime = true,
+                          bool _countPauses = true);
+
+  void initialize(ConcurrentGCMemoryManager* gc_memory_manager,
+                          bool _recordAccumulatedPauseTime,
+                          bool _countPauses);
+
+  ~TraceMemoryManagerPauseStats();
 };
 
 #endif // SHARE_SERVICES_MEMORYSERVICE_HPP
