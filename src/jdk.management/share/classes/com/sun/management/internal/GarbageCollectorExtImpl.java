@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,15 +27,19 @@ package com.sun.management.internal;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;
+import com.sun.management.GcDetails;
 import com.sun.management.GcInfo;
+
 import java.lang.management.MemoryPoolMXBean;
 import java.util.List;
+
 import javax.management.ListenerNotFoundException;
 import javax.management.MBeanNotificationInfo;
 import javax.management.Notification;
 import javax.management.NotificationFilter;
 import javax.management.NotificationListener;
 import javax.management.openmbean.CompositeData;
+
 import sun.management.GarbageCollectorImpl;
 import sun.management.ManagementFactoryHelper;
 
@@ -69,6 +73,11 @@ public class GarbageCollectorExtImpl extends GarbageCollectorImpl
     public GcInfo getLastGcInfo() {
         GcInfo info = getGcInfoBuilder().getLastGcInfo();
         return info;
+    }
+
+    @Override
+    public GcDetails getLastGcDetails() {
+        return null;
     }
 
     @Override

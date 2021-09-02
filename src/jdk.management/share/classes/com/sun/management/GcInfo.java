@@ -107,10 +107,10 @@ public class GcInfo implements CompositeData, CompositeDataView {
     }
 
     /**
-     * Returns the identifier of this garbage collection which is
+     * Returns the identifier of this garbage collection, which is
      * the number of collections that this collector has done.
      *
-     * @return the identifier of this garbage collection which is
+     * @return the identifier of this garbage collection, which is
      * the number of collections that this collector has done.
      */
     public long getId() {
