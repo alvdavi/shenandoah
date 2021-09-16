@@ -167,7 +167,7 @@ public class GcDetails /*extends GcInfo*/ {
      * collection in a two-generation system, this value is the total
      * size of objects promoted to the old generation. This value is
      * not the same as the difference in before and after {@link MemoryUsage}
-     * occupancy because allocation in the target {@link #MemoryPoolMXBean MemoryPool}(s)
+     * occupancy because allocation in the target {@link MemoryPoolMXBean MemoryPool}(s)
      * may have been done by other than the GC threads that ran this
      * collection.
      *
@@ -349,7 +349,7 @@ public class GcDetails /*extends GcInfo*/ {
      * by it and the end of this collection.
      *
      * The percentage is calculated by:
-     * ( {@link # getDurationSeconds getDurationSeconds}() /
+     * ( {@link #getDurationSeconds getDurationSeconds}() /
      * ( (double){@link #getTimeFromEndOfPreviousToStartNanos getTimeFromEndOfPreviousToStartNanos}()
      * + {@link #getDurationSeconds getDurationSeconds}() ) ) * 100.
      *
@@ -380,7 +380,7 @@ public class GcDetails /*extends GcInfo*/ {
      * The approximate object allocation rate in megabytes per second in
      * the memory pools affected by the associated collector during the
      * time interval returned by
-     * {@link #getTimeFromEndOfPreviousToStart getTimeFromEndOfPreviousToStart}.
+     * {@link #getTimeFromEndOfPreviousToStartNanos getTimeFromEndOfPreviousToStartNanos}.
      * <p>
      * Note that "the memory pools affected by the associated collector" may
      * not be the same as "the memory pools affected by this collection".
@@ -560,6 +560,65 @@ public class GcDetails /*extends GcInfo*/ {
      */
     public List<PauseDetails> getPauseDetails() {
 //        return Collections.unmodifiableList<PauseDetails>(new ArrayList<PauseDetails>(0));
+	return null;
+    }
+
+   /**
+     * Returns a {@code GcInfo} object represented by the
+     * given {@code CompositeData}. The given
+     * {@code CompositeData} must contain
+     * all the following attributes:
+     *
+     * <blockquote>
+     * <table class="striped"><caption style="display:none">description</caption>
+     * <thead>
+     * <tr>
+     *   <th scope="col" style="text-align:left">Attribute Name</th>
+     *   <th scope="col" style="text-align:left">Type</th>
+     * </tr>
+     * </thead>
+     * <tbody>
+     * <tr>
+     *   <th scope="row">index</th>
+     *   <td>{@code java.lang.Long}</td>
+     * </tr>
+     * <tr>
+     *   <th scope="row">startTime</th>
+     *   <td>{@code java.lang.Long}</td>
+     * </tr>
+     * <tr>
+     *   <th scope="row">endTime</th>
+     *   <td>{@code java.lang.Long}</td>
+     * </tr>
+     * <tr>
+     *   <th scope="row">memoryUsageBeforeGc</th>
+     *   <td>{@code javax.management.openmbean.TabularData}</td>
+     * </tr>
+     * <tr>
+     *   <th scope="row">memoryUsageAfterGc</th>
+     *   <td>{@code javax.management.openmbean.TabularData}</td>
+     * </tr>
+     * </tbody>
+     * </table>
+     * </blockquote>
+     *
+     * @throws IllegalArgumentException if {@code cd} does not
+     *   represent a {@code GcInfo} object with the attributes
+     *   described above.
+     *
+     * @return a {@code GcInfo} object represented by {@code cd}
+     * if {@code cd} is not {@code null}; {@code null} otherwise.
+     */
+    public static GcInfo from(CompositeData cd) {
+        if (cd == null) {
+            return null;
+        }
+
+	//        if (cd instanceof GcDetailsCompositeData) {
+	//            return ((GcDetailsCompositeData) cd).getGcDetails();
+	//        } else {
+	//            return new GcDetails(cd);
+	//        }
 	return null;
     }
 }

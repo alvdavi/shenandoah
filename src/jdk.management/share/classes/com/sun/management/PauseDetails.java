@@ -286,7 +286,7 @@ public class PauseDetails extends PhaseDetails /*implements CompositeView*/ {
      * <p>
      * This is a convenience method that returns an approximation of
      * the value returned by
-     * {@link #getPostOperationTimeNanos getPostOperationTimeNanos}.
+     * {@link #getPostOperationCleanupTimeNanos getPostOperationCleanupTimeNanos}.
      *
      * @return the time required for cleanup activities.
      */
@@ -300,7 +300,7 @@ public class PauseDetails extends PhaseDetails /*implements CompositeView*/ {
      * <p>
      * This is a convenience method that returns an approximation of
      * the value returned by
-     * {@link #getPostOperationTimeNanos getPostOperationTimeNanos}.
+     * {@link #getPostOperationCleanupTimeNanos getPostOperationCleanupTimeNanos}.
      *
      * @return the time required for cleanup activities.
      */

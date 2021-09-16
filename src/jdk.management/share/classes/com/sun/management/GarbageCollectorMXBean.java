@@ -93,7 +93,7 @@ public interface GarbageCollectorMXBean
      * collector between all calls to
      * {@link #resetCumulativeStats resetCumulativeStats}, plus those
      * that have occurred since the last such call. See
-     * {@link #getCumulativeRunningTime getCumulativeRunningTime}.
+     * {@link #getCumulativeRunningTimeNanos getCumulativeRunningTimeNanos}.
      *
      * @return the  wall clock time spent in completed collections;
      *         or {@code -1} if running time is undefined.
@@ -173,7 +173,7 @@ public interface GarbageCollectorMXBean
      * that have occurred between all calls to
      * {@link #resetCumulativeStats resetCumulativeStats}, plus those
      * that have occurred since the last such call. See
-     * {@link #getCumulativePauseTime getCumulativePauseTime}.
+     * {@link #getCumulativePauseTimeNanos getCumulativePauseTimeNanos}.
      *
      * @return the elapsed pause time in nanoseconds; or {@code -1} if
      *         pause time is undefined.

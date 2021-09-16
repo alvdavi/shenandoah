@@ -26,6 +26,10 @@
 
 package com.sun.management;
 
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataView;
+import javax.management.openmbean.CompositeType;
+
 import java.lang.String;
 
 /**

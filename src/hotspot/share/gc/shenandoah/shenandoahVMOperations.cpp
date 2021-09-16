@@ -58,7 +58,7 @@ void VM_ShenandoahFinalMarkStartEvac::doit() {
 }
 
 void VM_ShenandoahFullGC::doit() {
-  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::FULL, GLOBAL, _gc->_generation->generation_mode());
+  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::FULL, GLOBAL);
   _full_gc->entry_full(_gc_cause);
 }
 
@@ -78,6 +78,6 @@ void VM_ShenandoahFinalUpdateRefs::doit() {
 }
 
 void VM_ShenandoahFinalRoots::doit() {
-  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::CONCURRENT);
+  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::CONCURRENT, _gc->_generation->generation_mode());
   _gc->entry_final_roots();
 }
