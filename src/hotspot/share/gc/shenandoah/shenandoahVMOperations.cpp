@@ -58,7 +58,7 @@ void VM_ShenandoahFinalMarkStartEvac::doit() {
 }
 
 void VM_ShenandoahFullGC::doit() {
-  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::FULL, GLOBAL);
+  ShenandoahGCPauseMark mark(_gc_id, SvcGCMarker::FULL, GLOBAL, _gc->_generation->generation_mode());
   _full_gc->entry_full(_gc_cause);
 }
 
