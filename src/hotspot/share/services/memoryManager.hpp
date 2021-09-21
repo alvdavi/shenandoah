@@ -161,8 +161,8 @@ public:
   bool   is_gc_memory_manager()         { return true; }
   virtual jlong  gc_time_ms()           { return _accumulated_timer.milliseconds(); }
   size_t gc_count()             { return _num_collections; }
-  virtual jlong  gc_time_ns()           { return (jlong)(_accumulated_timer.seconds() * NANOUNITS); }
-  virtual jlong  gc_running_time_ns()   { return (jlong)(_accumulated_timer.seconds() * NANOUNITS); }       
+  virtual jlong  gc_time_ns()           { return _accumulated_timer.nanoseconds(); }
+  virtual jlong  gc_running_time_ns()   { return _accumulated_timer.nanoseconds(); }
   virtual size_t gc_pause_count()       { return _num_collections; }
   int    num_gc_threads()               { return _num_gc_threads; }
   void   set_num_gc_threads(int count)  { _num_gc_threads = count; }
@@ -191,7 +191,7 @@ public:
   ConcurrentGCMemoryManager(const char* name, const char* gc_end_message);
 
   jlong gc_time_ms() override         { return _accumulated_pause_timer.milliseconds(); }
-  jlong gc_time_ns() override          { return (jlong)(_accumulated_pause_timer.seconds() * NANOUNITS); }
+  jlong gc_time_ns() override         { return _accumulated_pause_timer.nanoseconds(); }
   size_t gc_pause_count() override    { return _num_pauses; }
 
   void   pause_begin(bool recordAccumulatedPauseTime, bool countPauses);
