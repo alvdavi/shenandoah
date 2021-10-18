@@ -77,7 +77,7 @@ public interface GarbageCollectorMXBean
      *         information; or {@code null} if no GC information is
      *         available.
      */
-    public GcDetails getLastGcDetails();
+    //public GcDetails getLastGcDetails();
 
     /**
      * The total elapsed wall clock time in nanoseconds spent in

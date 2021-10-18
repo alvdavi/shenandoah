@@ -38,6 +38,7 @@
 #include "services/memoryPool.hpp"
 #include "services/memoryService.hpp"
 #include "services/gcNotifier.hpp"
+#include "services/threadService.hpp"
 #include "utilities/dtrace.hpp"
 
 MemoryManager::MemoryManager(const char* name) :
@@ -138,17 +139,34 @@ instanceOop MemoryManager::get_memory_manager_instance(TRAPS) {
   return (instanceOop)mgr_obj;
 }
 
-GCStatInfo::GCStatInfo(int num_pools) {
+GCPauseStatInfo::GCPauseStatInfo() :
+  _index(0),
+  _start_time(0L),
+  _end_time(0L),
+  _threads_notify_time(0L),
+  _threads_suspension_time(0L),
+  _threads_wakeup_time(0L),
+  _threads_lock_acquire_time(0L),
+  _pause_cause(NULL),
+  _pause_type(NULL),
+  _post_operation_cleanup_time(0L)
+  {}
+
+GCStatInfo::GCStatInfo(int num_pools, int max_pauses) {
   // initialize the arrays for memory usage
   _before_gc_usage_array = NEW_C_HEAP_ARRAY(MemoryUsage, num_pools, mtInternal);
   _after_gc_usage_array  = NEW_C_HEAP_ARRAY(MemoryUsage, num_pools, mtInternal);
   _usage_array_size = num_pools;
+  _pause_stat_info_array = NEW_C_HEAP_ARRAY(GCPauseStatInfo, max_pauses, mtInternal);
+  _pause_array_size = max_pauses;
+
   clear();
 }
 
 GCStatInfo::~GCStatInfo() {
   FREE_C_HEAP_ARRAY(MemoryUsage*, _before_gc_usage_array);
   FREE_C_HEAP_ARRAY(MemoryUsage*, _after_gc_usage_array);
+  FREE_C_HEAP_ARRAY(GCPauseStatInfo*, _pause_stat_info_array);
 }
 
 void GCStatInfo::set_gc_usage(int pool_index, MemoryUsage usage, bool before_gc) {
@@ -167,6 +185,25 @@ void GCStatInfo::clear() {
   _end_time = 0L;
   for (int i = 0; i < _usage_array_size; i++) ::new (&_before_gc_usage_array[i]) MemoryUsage();
   for (int i = 0; i < _usage_array_size; i++) ::new (&_after_gc_usage_array[i]) MemoryUsage();
+  
+  //
+  // Extended stats
+  //
+  _gc_cause = GCCause::to_string(GCCause::_no_cause_specified);
+  _previous_end_time = 0L;
+  _allocated_since_previous = 0L;
+  _allocated_during_collection = 0L;
+  _copied_between_pools = 0L;
+  _garbage_collected = 0L;
+  _garbage_found = 0L;
+  _app_thread_count_after_gc = 0L;
+  _max_app_thread_delay = 0L;
+  _total_app_thread_delay = 0L;
+  _delayed_app_thread_count = 0L;
+  _live_in_pools_before_gc = 0L;
+  _live_in_pools_after_gc = 0l;
+  for (int i = 0; i < _pause_array_size; i++) ::new (&_pause_stat_info_array[i]) GCPauseStatInfo();
+  _pause_array_used = 0;
 }
 
 
@@ -198,8 +235,8 @@ void GCMemoryManager::add_pool(MemoryPool* pool, bool always_affected_by_gc) {
 
 void GCMemoryManager::initialize_gc_stat_info() {
   assert(MemoryService::num_memory_pools() > 0, "should have one or more memory pools");
-  _last_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools());
-  _current_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools());
+  _last_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle());
+  _current_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle());
   // tracking concurrent collections we need two objects: one to update, and one to
   // hold the publicly available "last (completed) gc" information.
 }
@@ -207,6 +244,12 @@ void GCMemoryManager::initialize_gc_stat_info() {
 void GCMemoryManager::gc_begin(bool recordGCBeginTime, bool recordPreGCUsage,
                                bool recordAccumulatedGCTime) {
   assert(_last_gc_stat != NULL && _current_gc_stat != NULL, "Just checking");
+  
+  bool recordExtendedStats = false;
+  #if INCLUDE_SHENANDOAHGC
+  recordExtendedStats = true;
+  #endif
+
   if (recordAccumulatedGCTime) {
     _accumulated_timer.start();
   }
@@ -239,11 +282,21 @@ void GCMemoryManager::gc_end(bool recordPostGCUsage,
                              bool recordGCEndTime, bool countCollection,
                              GCCause::Cause cause,
                              bool allMemoryPoolsAffected) {
+
+  bool recordExtendedStats = false;
+  #if INCLUDE_SHENANDOAHGC
+  recordExtendedStats = true;
+  #endif
+
   if (recordAccumulatedGCTime) {
     _accumulated_timer.stop();
   }
   if (recordGCEndTime) {
     _current_gc_stat->set_end_time(Management::timestamp());
+  }
+  if (recordExtendedStats) {
+    _current_gc_stat->set_gc_cause(GCCause::to_string(cause));
+    _current_gc_stat->set_app_thread_count_after_gc(ThreadService::get_total_thread_count());
   }
 
   if (recordPostGCUsage) {
@@ -286,6 +339,9 @@ void GCMemoryManager::gc_end(bool recordPostGCUsage,
       _current_gc_stat = tmp;
       // reset the current stat for diagnosability purposes
       _current_gc_stat->clear();
+      if (recordExtendedStats && recordGCEndTime) {
+        _current_gc_stat->set_previous_end_time(_last_gc_stat->end_time());
+      }
     }
 
     if (is_notification_enabled()) {
@@ -310,6 +366,27 @@ size_t GCMemoryManager::get_last_gc_stat(GCStatInfo* dest) {
     size_t len = dest->usage_array_size() * sizeof(MemoryUsage);
     memcpy(dest->before_gc_usage_array(), _last_gc_stat->before_gc_usage_array(), len);
     memcpy(dest->after_gc_usage_array(), _last_gc_stat->after_gc_usage_array(), len);
+
+    // Extended stats
+    dest->set_gc_cause(_last_gc_stat->get_gc_cause());
+    dest->set_previous_end_time(_last_gc_stat->get_previous_end_time());
+    dest->set_allocated_since_previous(_last_gc_stat->get_allocated_since_previous());
+    dest->set_allocated_during_collection(_last_gc_stat->get_allocated_during_collection());
+    dest->set_copied_between_pools(_last_gc_stat->get_copied_between_pools());
+    dest->set_garbage_collected(_last_gc_stat->get_garbage_collected());
+    dest->set_garbage_found(_last_gc_stat->get_garbage_found());
+    dest->set_app_thread_count_after_gc(_last_gc_stat->get_app_thread_count_after_gc());
+    dest->set_max_app_thread_delay(_last_gc_stat->get_max_app_thread_delay());
+    dest->set_total_app_thread_delay(_last_gc_stat->get_total_app_thread_delay());
+    dest->set_delay_app_thread_count(_last_gc_stat->get_delay_app_thread_count());
+    dest->set_gc_thread_count(_last_gc_stat->get_gc_thread_count());
+    dest->set_live_in_pools_before_gc(_last_gc_stat->get_live_in_pools_before_gc());
+    dest->set_live_in_pools_after_gc(_last_gc_stat->get_live_in_pools_after_gc());
+    
+    assert(dest->pause_array_size() == _last_gc_stat->pause_array_size(),
+           "Must have same array size");
+    size_t pause_len = _last_gc_stat->pause_array_used() * sizeof(GCPauseStatInfo);
+    memcpy(dest->pause_stat_info(), _last_gc_stat->pause_stat_info(), pause_len);
   }
   return _last_gc_stat->gc_index();
 }

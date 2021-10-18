@@ -239,6 +239,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLast
         return 0;
     }
 
+
     // convert the ext_att_types to native types
     nativeTypes = (jchar*) malloc((size_t)ext_att_count * sizeof(jchar));
     if (nativeTypes == NULL) {
@@ -294,14 +295,31 @@ JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLast
         free(nativeTypes);
     }
 
-    return JNU_NewObjectByName(env,
+    jstring cause = (*env)->NewStringUTF(env, gc_stat.cause);
+    if ((*env)->ExceptionCheck(env)) {
+        return 0;
+    }
+
+    jobject toReturn = JNU_NewObjectByName(env,
        "com/sun/management/GcInfo",
-       "(Lcom/sun/management/internal/GcInfoBuilder;JJJ[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;[Ljava/lang/Object;)V",
+       "(Lcom/sun/management/internal/GcInfoBuilder;JJJ[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;Ljava/lang/String;JJJJJJJJZ[Ljava/lang/Object;)V",
        builder,
        gc_stat.gc_index,
        gc_stat.start_time,
        gc_stat.end_time,
        usageBeforeGC,
        usageAfterGC,
+       cause,
+       gc_stat.previous_end_time,
+       gc_stat.allocated_since_previous,
+       gc_stat.allocated_during_collection,
+       gc_stat.copied_between_pools,
+       gc_stat.garbage_found,
+       gc_stat.garbage_collected,
+       gc_stat.liveInPoolsBeforeGc,
+       gc_stat.liveInPoolsAfterGc,
+       JNI_TRUE,
        ext_att_values);
+
+    return toReturn;
 }

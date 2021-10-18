@@ -42,6 +42,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import sun.management.LazyCompositeData;
 import static sun.management.LazyCompositeData.getLong;
+import static sun.management.LazyCompositeData.getString;
 import sun.management.MappedMXBeanType;
 import sun.management.Util;
 
@@ -107,13 +108,41 @@ public class GcInfoCompositeData extends LazyCompositeData {
         try {
             baseGcInfoItemValues = new Object[] {
                 info.getId(),
-                info.getStartTime(),
-                info.getEndTime(),
-                info.getDuration(),
+                info.getStartTimeMillis(),
+                info.getEndTimeMillis(),
+                info.getDurationMillis(),
                 memoryUsageMapType.toOpenTypeData(info.getMemoryUsageBeforeGc()),
                 memoryUsageMapType.toOpenTypeData(info.getMemoryUsageAfterGc()),
+                info.getStartTimeNanos(),
+                info.getStartTimeMillis(),
+                info.getStartTimeSeconds(),
+                info.getEndTimeNanos(),
+                info.getEndTimeMillis(),
+                info.getEndTimeSeconds(),
+                info.getDurationNanos(),
+                info.getDurationMillis(),
+                info.getDurationSeconds(),
+                info.isValid(),
+                info.getGarbageCollectionCause(),
+                info.getLiveInPoolsBeforeGc(),
+                info.getLiveInPoolsAfterGc(),
+                info.getGarbageFound(),
+                info.getGarbageCollected(),
+                info.getCopiedBetweenPools(),
+                info.getTimeFromEndOfPreviousToStartNanos(),
+                info.getTimeFromEndOfPreviousToStartMillis(),
+                info.getTimeFromEndOfPreviousToStartSeconds(),
+                info.getPercentageOfTimeCollectorWasRunning(),
+                info.getAllocRateDuringCollection(),
+                info.getAllocRateBetweenEndOfPreviousAndStart(),
+                info.getPreviousEndTimeNanos(),
+                info.getPreviousEndTimeMillis(),
+                info.getPreviousEndTimeSeconds(),
+                info.getAllocatedDuringCollection(),
+                info.getAllocatedBetweenEndOfPreviousAndStart()
             };
         } catch (OpenDataException e) {
+        
             // Should never reach here
             throw new AssertionError(e);
         }
@@ -157,6 +186,38 @@ public class GcInfoCompositeData extends LazyCompositeData {
     private static final String MEMORY_USAGE_BEFORE_GC = "memoryUsageBeforeGc";
     private static final String MEMORY_USAGE_AFTER_GC  = "memoryUsageAfterGc";
 
+    private static final String START_TIME_NANOS        = "startTimeNanos";
+    private static final String START_TIME_MILLIS       = "startTimeMillis";
+    private static final String START_TIME_SECONDS      = "startTimeSeconds";
+    private static final String END_TIME_NANOS          = "endTimeNanos";
+    private static final String END_TIME_MILLIS         = "endTimeMillis";
+    private static final String END_TIME_SECONDS        = "endTimeSeconds";
+    private static final String DURATION_NANOS          = "durationNanos";
+    private static final String DURATION_MILLIS         = "durationMillis";
+    private static final String DURATION_SECONDS        = "durationSeconds";
+
+    private static final String VALID                   = "valid";
+    private static final String GC_CAUSE                = "gcCause";
+    private static final String LIVE_IN_POOLS_BEFORE_GC = "liveInPoolsBeforeGc";
+    private static final String LIVE_IN_POOLS_AFTER_GC  = "liveInPoolsAfterGc";
+    private static final String GARBAGE_FOUND           = "garbageFound";
+    private static final String GARBAGE_COLLECTED       = "garbageCollected";
+    private static final String COPIED_BETWEEN_POOLS    = "copiedBetweenPools";
+
+    private static final String TIME_FROM_END_OF_PREVIOUS_TO_START_NANOS     = "timeFromEndOfPreviousToStartNanos";
+    private static final String TIME_FROM_END_OF_PREVIOUS_TO_START_MILLIS    = "timeFromEndOfPreviousToStartMillis";
+    private static final String TIME_FROM_END_OF_PREVIOUS_TO_START_SECONDS   = "timeFromEndOfPreviousToStartSeconds";
+    private static final String PERCENTAGE_OF_TIME_COLLECTOR_IS_RUNNING      = "percentageOfTimeCollectorIsRunning";
+    private static final String ALLOC_RATE_DURING_COLLECTION                 = "allocRateDuringCollection";
+    private static final String ALLOC_RATE_BETWEEN_END_OF_PRECIOUS_AND_START = "allocRateBetweenEndOfPreviousAndStart";
+
+    private static final String PREVIOUS_END_TIME_NANOS                      = "previousEndTimeNanos";
+    private static final String PREVIOUS_END_TIME_MILLIS                     = "previousEndTimeMillis";
+    private static final String PREVIOUS_END_TIME_SECONDS                    = "previousEndTimeSeconds";
+    private static final String ALLOCATED_DURING_COLLECTION                  = "allocatedDuringCollection";
+    private static final String ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START  = "allocatedBetweenEndOfPreviousAndStart";
+
+
     private static final String[] baseGcInfoItemNames = {
         ID,
         START_TIME,
@@ -164,6 +225,37 @@ public class GcInfoCompositeData extends LazyCompositeData {
         DURATION,
         MEMORY_USAGE_BEFORE_GC,
         MEMORY_USAGE_AFTER_GC,
+
+        START_TIME_NANOS,
+        START_TIME_MILLIS,
+        START_TIME_SECONDS,
+        END_TIME_NANOS,
+        END_TIME_MILLIS,
+        END_TIME_SECONDS,
+        DURATION_NANOS,
+        DURATION_MILLIS,
+        DURATION_SECONDS,
+        
+        VALID,
+        GC_CAUSE,
+        LIVE_IN_POOLS_BEFORE_GC,
+        LIVE_IN_POOLS_AFTER_GC,
+        GARBAGE_FOUND,
+        GARBAGE_COLLECTED,
+        COPIED_BETWEEN_POOLS,
+        TIME_FROM_END_OF_PREVIOUS_TO_START_NANOS,
+        TIME_FROM_END_OF_PREVIOUS_TO_START_MILLIS,
+        TIME_FROM_END_OF_PREVIOUS_TO_START_SECONDS,
+        PERCENTAGE_OF_TIME_COLLECTOR_IS_RUNNING,
+        ALLOC_RATE_DURING_COLLECTION,
+        ALLOC_RATE_BETWEEN_END_OF_PRECIOUS_AND_START,
+
+        PREVIOUS_END_TIME_NANOS,
+        PREVIOUS_END_TIME_MILLIS,
+        PREVIOUS_END_TIME_SECONDS,
+        ALLOCATED_DURING_COLLECTION,
+        ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START
+        
     };
 
 
@@ -188,13 +280,44 @@ public class GcInfoCompositeData extends LazyCompositeData {
         if (baseGcInfoItemTypes == null) {
             OpenType<?> memoryUsageOpenType = memoryUsageMapType.getOpenType();
             baseGcInfoItemTypes = new OpenType<?>[] {
-                SimpleType.LONG,
-                SimpleType.LONG,
-                SimpleType.LONG,
-                SimpleType.LONG,
+                SimpleType.LONG,       // ID
+                SimpleType.LONG,       // START_TIME
+                SimpleType.LONG,       // END_TIME
+                SimpleType.LONG,       // DURATION
 
-                memoryUsageOpenType,
-                memoryUsageOpenType,
+                memoryUsageOpenType,   // MEMORY_USAGE_BEFORE_GC
+                memoryUsageOpenType,   // MEMORY_USAGE_AFTER_GC
+
+                SimpleType.LONG,       // START_TIME_NANOS
+                SimpleType.LONG,       // START_TIME_MILLIS
+                SimpleType.DOUBLE,     // START_TIME_SECONDS
+                SimpleType.LONG,       // END_TIME_NANOS
+                SimpleType.LONG,       // END_TIME_MILLIS
+                SimpleType.DOUBLE,     // END_TIME_SECONDS
+                SimpleType.LONG,       // DURATION_NANOS
+                SimpleType.LONG,       // DURATION_MILLIS
+                SimpleType.DOUBLE,     // DURATION_SECONDS
+                
+                SimpleType.BOOLEAN,    // VALID
+                SimpleType.STRING,     // GC_CAUSE
+                SimpleType.LONG,       // LIVE_IN_POOLS_BEFORE_GC
+                SimpleType.LONG,       // LIVE_IN_POOLS_AFTER_GC
+                SimpleType.LONG,       // GARBAGE_FOUND
+                SimpleType.LONG,       // GARBAGE_COLLECTED
+                SimpleType.LONG,       // COPIED_BETWEEN_POOLS
+                SimpleType.LONG,       // TIME_FROM_END_OF_PREVIOUS_TO_START_NANOS
+                SimpleType.LONG,       // TIME_FROM_END_OF_PREVIOUS_TO_START_MILLIS
+                SimpleType.DOUBLE,     // TIME_FROM_END_OF_PREVIOUS_TO_START_SECONDS
+                SimpleType.DOUBLE,     // PERCENTAGE_OF_TIME_COLLECTOR_IS_RUNNING
+                SimpleType.DOUBLE,     // ALLOC_RATE_DURING_COLLECTION
+                SimpleType.DOUBLE,     // ALLOC_RATE_BETWEEN_END_OF_PREVIOUS_AND_START    
+
+                SimpleType.LONG,       // PREVIOUS_END_TIME_NANOS
+                SimpleType.LONG,       // PREVIOUS_END_TIME_MILLIS
+                SimpleType.DOUBLE,     // PREVIOUS_END_TIME_SECONDS
+                SimpleType.LONG,       // ALLOCATED_DURING_COLLECTION
+                SimpleType.LONG,       // ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START    
+                   
             };
         }
         return baseGcInfoItemTypes;
@@ -209,6 +332,103 @@ public class GcInfoCompositeData extends LazyCompositeData {
     public static long getEndTime(CompositeData cd) {
         return getLong(cd, END_TIME);
     }
+
+    public static long getStartTimeNanos(CompositeData cd) {
+        return getLong(cd, START_TIME_NANOS);
+    }
+
+    public static double getStartTimeSeconds(CompositeData cd) {
+        return getDouble(cd, START_TIME_SECONDS);
+    }
+
+    public static long getEndTimeNanos(CompositeData cd) {
+        return getLong(cd, END_TIME_NANOS);
+    }
+
+    public static double getEndTimeSeconds(CompositeData cd) {
+        return getDouble(cd, END_TIME_SECONDS);
+    }
+
+    public static long getDurationNanos(CompositeData cd) {
+        return getLong(cd, DURATION_NANOS);
+    }
+
+    public static double getDurationSeconds(CompositeData cd) {
+        return getDouble(cd, DURATION_SECONDS);
+    }
+
+    public static boolean isValid(CompositeData cd) {
+        return getBoolean(cd, VALID);
+    }
+
+    public static String getGarbageCollectionCause(CompositeData cd) {
+        return getString(cd, GC_CAUSE);
+    }
+
+    public static long getLiveInPoolsBeforeGc(CompositeData cd) {
+        return getLong(cd, LIVE_IN_POOLS_BEFORE_GC);
+    }
+
+    public static long getLiveInPoolsAfterGc(CompositeData cd) {
+        return getLong(cd, LIVE_IN_POOLS_AFTER_GC);
+    }
+
+    public static long getGarbageFound(CompositeData cd) {
+        return getLong(cd, GARBAGE_FOUND);
+    }
+
+    public static long getGarbageCollected(CompositeData cd) {
+        return getLong(cd, GARBAGE_COLLECTED);
+    }
+
+    public static long getCopiedBetweenPools(CompositeData cd) {
+        return getLong(cd, COPIED_BETWEEN_POOLS);
+    }
+
+    public static long getTimeFromEndOfPreviousToStartNanos(CompositeData cd) {
+        return getLong(cd, TIME_FROM_END_OF_PREVIOUS_TO_START_NANOS);
+    }
+
+    public static long getTimeFromEndOfPreviousToStartMillis(CompositeData cd) {
+        return getLong(cd, TIME_FROM_END_OF_PREVIOUS_TO_START_MILLIS);
+    }
+
+    public static double getTimeFromEndOfPreviousToStartSeconds(CompositeData cd) {
+        return getDouble(cd, TIME_FROM_END_OF_PREVIOUS_TO_START_SECONDS);
+    }
+
+    public static double getPercentageOfTimeCollectorWasRunning(CompositeData cd) {
+        return getDouble(cd, PERCENTAGE_OF_TIME_COLLECTOR_IS_RUNNING);
+    }
+
+    public static double getAllocRateDuringCollection(CompositeData cd) {
+        return getDouble(cd, ALLOC_RATE_DURING_COLLECTION);
+    }
+
+    public static double getAllocRateBetweenEndOfPreviousAndStart(CompositeData cd) {
+        return getDouble(cd, ALLOC_RATE_BETWEEN_END_OF_PRECIOUS_AND_START);
+    }
+
+    public static long getPreviousEndTimeNanos(CompositeData cd) {
+        return getLong(cd, PREVIOUS_END_TIME_NANOS);
+    }
+
+    public static long getPreviousEndTimeMillis(CompositeData cd) {
+        return getLong(cd, PREVIOUS_END_TIME_MILLIS);
+    }
+
+    public static double getPreviousEndTimeSeconds(CompositeData cd) {
+        return getDouble(cd, PREVIOUS_END_TIME_SECONDS);
+    }
+
+    public static long getAllocatedDuringCollection(CompositeData cd) {
+        return getLong(cd, ALLOCATED_DURING_COLLECTION);
+    }
+
+    public static long getAllocatedBetweenEndOfPreviousAndStart(CompositeData cd) {
+        return getLong(cd, ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START);
+    }
+
 
     public static Map<String, MemoryUsage>
             getMemoryUsageBeforeGc(CompositeData cd) {
@@ -236,6 +456,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
             throw new AssertionError(e);
         }
     }
+
+
 
     /**
      * Returns true if the input CompositeData has the expected
@@ -271,6 +493,13 @@ public class GcInfoCompositeData extends LazyCompositeData {
             }
         }
         return baseGcInfoCompositeType;
+    }
+
+    public static double getDouble(CompositeData cd, String itemName) {
+        if (cd == null)
+            throw new IllegalArgumentException("Null CompositeData");
+
+        return ((Double) cd.get(itemName));
     }
 
     private static final long serialVersionUID = -5716428894085882742L;

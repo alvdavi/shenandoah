@@ -75,10 +75,10 @@ public class GarbageCollectorExtImpl extends GarbageCollectorImpl
         return info;
     }
 
-    @Override
-    public GcDetails getLastGcDetails() {
-        return null;
-    }
+    // @Override
+    // public GcDetails getLastGcDetails() {
+    //     return null;
+    // }
 
     @Override
     public native long getRunningTimeNanos();

@@ -83,6 +83,33 @@ public:
   static MemoryManager*   get_metaspace_memory_manager();
 };
 
+class GCPauseStatInfo {
+private:
+  //
+  // General properties
+  size_t _index;
+  jlong  _start_time;
+  jlong  _end_time;
+
+  //
+  // Thread pause information
+  //
+  jlong _threads_notify_time;
+  jlong _threads_suspension_time;
+  jlong _threads_wakeup_time;
+  jlong _threads_lock_acquire_time;
+
+  //
+  // Other properties
+  //  
+  const char* _pause_cause;
+  const char* _pause_type;
+  jlong       _post_operation_cleanup_time;
+
+public:
+  GCPauseStatInfo();
+};
+
 class GCStatInfo : public ResourceObj {
 private:
   size_t _index;
@@ -94,10 +121,44 @@ private:
   MemoryUsage* _after_gc_usage_array;
   int          _usage_array_size;
 
+  //
+  // Extended stats
+  //
+  const char* _gc_cause;
+
+  // Previous information
+  jlong _previous_end_time;
+
+  // Allocation information
+  jlong _allocated_since_previous;
+  jlong _allocated_during_collection;
+  jlong _copied_between_pools;
+  
+  // Garbage stats
+  jlong _garbage_collected;
+  jlong _garbage_found;
+
+  // Mutator thread info
+  size_t _app_thread_count_after_gc;
+  jlong _max_app_thread_delay;
+  jlong _total_app_thread_delay;
+  size_t _delayed_app_thread_count;
+  size_t _gc_thread_count;
+
+  // Live memory
+  jlong _live_in_pools_before_gc;
+  jlong _live_in_pools_after_gc;
+
+  GCPauseStatInfo* _pause_stat_info_array;
+  int              _pause_array_size;
+  int              _pause_array_used;
+
+  ///**
+
   void set_gc_usage(int pool_index, MemoryUsage, bool before_gc);
 
 public:
-  GCStatInfo(int num_pools);
+  GCStatInfo(int num_pools, int max_pauses);
   ~GCStatInfo();
 
   size_t gc_index()               { return _index; }
@@ -116,6 +177,26 @@ public:
   MemoryUsage* before_gc_usage_array() { return _before_gc_usage_array; }
   MemoryUsage* after_gc_usage_array()  { return _after_gc_usage_array; }
 
+  const char* get_gc_cause()              { return _gc_cause; }
+  jlong get_previous_end_time()           { return _previous_end_time; }
+  jlong get_allocated_since_previous()    { return _allocated_since_previous; }
+  jlong get_allocated_during_collection() { return _allocated_during_collection; }
+  jlong get_copied_between_pools()        { return _copied_between_pools; }
+  jlong get_garbage_collected()           { return _garbage_collected; } // MemoryBeforeGc - LiveBeforeGc
+  jlong get_garbage_found()               { return _garbage_found; } // Check ShenandoahHeuristics
+  size_t get_app_thread_count_after_gc()  { return _app_thread_count_after_gc; } // Ask Paul about ThreadService
+  jlong get_live_in_pools_before_gc()     { return _live_in_pools_before_gc; }
+  jlong get_live_in_pools_after_gc()      { return _live_in_pools_after_gc; }
+  
+  jlong get_max_app_thread_delay()        { return _max_app_thread_delay; }  // Ask William
+  jlong get_total_app_thread_delay()      { return _total_app_thread_delay; }
+  size_t get_delay_app_thread_count()     { return _delayed_app_thread_count; }
+  size_t get_gc_thread_count()            { return _gc_thread_count; }
+  
+  GCPauseStatInfo* pause_stat_info() { return _pause_stat_info_array; }
+  int pause_array_size()             { return _usage_array_size; }
+  int pause_array_used()             { return _pause_array_used; }
+
   void set_index(size_t index)    { _index = index; }
   void set_start_time(jlong time) { _start_time = time; }
   void set_end_time(jlong time)   { _end_time = time; }
@@ -128,6 +209,22 @@ public:
     set_gc_usage(pool_index, usage, false /* after gc */);
   }
 
+  void set_gc_cause(const char* cause)                                    { _gc_cause = cause; }
+  void set_previous_end_time(jlong previous_end_time)                     { _previous_end_time = previous_end_time; }
+  void set_allocated_since_previous(jlong allocated_since_previous)       { _allocated_since_previous = allocated_since_previous; }
+  void set_allocated_during_collection(jlong allocated_during_collection) { _allocated_during_collection = allocated_during_collection; }
+  void set_copied_between_pools(jlong copied_between_pools)               { _copied_between_pools = copied_between_pools; }
+  void set_garbage_collected(jlong garbage_collected)                     { _garbage_collected = garbage_collected; }
+  void set_garbage_found(jlong garbage_found)                             { _garbage_found = garbage_found; }
+  void set_app_thread_count_after_gc(size_t app_thread_count_after_gc)    { _app_thread_count_after_gc = app_thread_count_after_gc; }
+  void set_max_app_thread_delay(jlong max_app_thread_delay)               { _max_app_thread_delay = max_app_thread_delay; }
+  void set_total_app_thread_delay(jlong total_app_thread_delay)           { _total_app_thread_delay = total_app_thread_delay; }
+  void set_delay_app_thread_count(size_t delayed_app_thread_count)        { _delayed_app_thread_count = delayed_app_thread_count; }
+  void set_gc_thread_count(size_t gc_thread_count)                        { _gc_thread_count = gc_thread_count; }
+  void set_live_in_pools_before_gc(jlong live_in_pools_before_gc)         { _live_in_pools_before_gc = live_in_pools_before_gc; }
+  void set_live_in_pools_after_gc(jlong live_in_pools_after_gc)           { _live_in_pools_after_gc = live_in_pools_after_gc; }
+  void set_pause_array_used(int used);
+
   void clear();
 };
 
@@ -136,13 +233,15 @@ private:
   // TODO: We should unify the GCCounter and GCMemoryManager statistic
   size_t       _num_collections;
   elapsedTimer _accumulated_timer;
-  GCStatInfo*  _last_gc_stat;
   Mutex*       _last_gc_lock;
-  GCStatInfo*  _current_gc_stat;
   int          _num_gc_threads;
   volatile bool _notification_enabled;
   const char*  _gc_end_message;
   bool         _pool_always_affected_by_gc[MemoryManager::max_num_pools];
+
+protected:
+  GCStatInfo*  _last_gc_stat;
+  GCStatInfo*  _current_gc_stat;
 
 public:
   GCMemoryManager(const char* name, const char* gc_end_message);
@@ -164,6 +263,7 @@ public:
   virtual jlong  gc_time_ns()              { return _accumulated_timer.nanoseconds(); }
   virtual jlong  gc_running_time_ns()      { return _accumulated_timer.nanoseconds(); }
   virtual size_t gc_pause_count()          { return _num_collections; }
+  virtual int max_pauses_per_cycle()       { return 0; }
   int    num_gc_threads()               { return _num_gc_threads; }
   void   set_num_gc_threads(int count)  { _num_gc_threads = count; }
 

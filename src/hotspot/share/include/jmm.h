@@ -206,6 +206,28 @@ typedef struct {
   jvalue*      gc_ext_attribute_values;        /* Array of jvalue for GC extension attributes */
   jint         num_gc_ext_attributes;          /* number of GC extension attribute values s are filled */
                                                /* -1 indicates gc_ext_attribute_values is not big enough */
+  const char*  cause;                          /* Cause for the gc collection */
+  jlong        previous_end_time;              /* Ent time of the previous GC */
+  jlong        allocated_since_previous;       /* Bytes allocated since end of previous collection until next start */
+  jlong        allocated_during_collection;    /* Bytes allocated during the GC cycle */
+  jlong        copied_between_pools;           /* Bytes copied between different memory pools during the collection */
+  jlong        garbage_collected;              /* Amount in bytes that were reclaimed during the collection */
+  jlong        garbage_found;                  /* Amount in bytes of garbage located during the collection */
+  jint         app_thread_count_after_gc;      /* Application threads after GC */
+  jlong        max_app_thread_delay;           /* Maximun amount of delay in ns for one thread during GC */
+  jlong        total_app_thread_delay;         /* Total amount of delay in ns across all threads during GC */
+  jint         delayed_app_thread_count;       /* Total number of threads delayed during GC */
+  jint         gc_thread_count;                /* Threads used during GC */
+  jlong        liveInPoolsBeforeGc;            /* LiveInPoolsBeforeGc */
+  jlong        liveInPoolsAfterGc;             /* LiveInPoolsAfterGc */
+
+
+  /*
+  jobjectArray pause_details;
+  */
+
+
+
 } jmmGCStat;
 
 typedef struct {

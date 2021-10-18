@@ -1877,7 +1877,8 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
   // Make a copy of the last GC statistics
   // GC may occur while constructing the last GC information
   int num_pools = MemoryService::num_memory_pools();
-  GCStatInfo stat(num_pools);
+  int max_pauses = mgr->max_pauses_per_cycle();
+  GCStatInfo stat(num_pools, max_pauses);
   if (mgr->get_last_gc_stat(&stat) == 0) {
     gc_stat->gc_index = 0;
     return;
@@ -1886,6 +1887,22 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
   gc_stat->gc_index = stat.gc_index();
   gc_stat->start_time = Management::ticks_to_ns(stat.start_time());
   gc_stat->end_time = Management::ticks_to_ns(stat.end_time());
+
+  gc_stat->cause = stat.get_gc_cause();
+  gc_stat->previous_end_time = Management::ticks_to_ns(stat.get_previous_end_time());
+  gc_stat->allocated_since_previous = stat.get_allocated_since_previous();
+  gc_stat->allocated_during_collection = stat.get_allocated_during_collection();
+  gc_stat->copied_between_pools = stat.get_copied_between_pools();
+  gc_stat->garbage_collected = stat.get_garbage_collected();
+  gc_stat->garbage_found = stat.get_garbage_found();
+  gc_stat->app_thread_count_after_gc = stat.get_app_thread_count_after_gc();
+  gc_stat->max_app_thread_delay = stat.get_max_app_thread_delay();
+  gc_stat->total_app_thread_delay = stat.get_total_app_thread_delay();
+  gc_stat->delayed_app_thread_count = stat.get_delay_app_thread_count();
+  gc_stat->gc_thread_count = stat.get_gc_thread_count();
+  gc_stat->liveInPoolsBeforeGc = stat.get_live_in_pools_before_gc();
+  gc_stat->liveInPoolsAfterGc = stat.get_live_in_pools_after_gc();
+
 
   // Current implementation does not have GC extension attributes
   gc_stat->num_gc_ext_attributes = 0;
@@ -1921,9 +1938,6 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
 
   if (gc_stat->gc_ext_attribute_values_size > 0) {
     mgr->ext_attribute_values(gc_stat->gc_ext_attribute_values);
-    // Current implementation only has 1 attribute (number of GC threads)
-    // The type is 'I'
-    //gc_stat->gc_ext_attribute_values[0].i = mgr->num_gc_threads();
   }
 JVM_END
 
