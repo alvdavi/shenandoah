@@ -28,16 +28,28 @@
 #include "gc/shenandoah/shenandoahHeap.hpp"
 #include "services/memoryManager.hpp"
 
-//class ShenandoahHeap;
 
 class ShenandoahMemoryManager : public ConcurrentGCMemoryManager {
 protected:
    ShenandoahHeap* _heap;
+   ShenandoahGeneration* _generation;
+   jlong _allocated_since_previous_start;
+
 
 public:
-  ShenandoahMemoryManager(ShenandoahHeap* heap, const char* name,
-                          const char* gc_end_message);
-  
+  ShenandoahMemoryManager(ShenandoahHeap* heap, ShenandoahGeneration* generation,
+                          const char* name, const char* gc_end_message);
+
+  virtual void gc_begin(bool recordGCBeginTime, bool recordPreGCUsage,
+              bool recordAccumulatedGCTime) override;
+
+  virtual void gc_end(bool recordPostGCUsage, bool recordAccumulatedGCTime,
+              bool recordGCEndTime, bool countCollection, GCCause::Cause cause,
+              bool allMemoryPoolsAffected) override;
+
+  virtual void gc_requested();
+  virtual void update_copied_between_pools(jlong copied_before_reset);
+  virtual void report_garbage(jlong found, jlong collected);
 };
 
 class ShenandoahGlobalMemoryManager : public ShenandoahMemoryManager {

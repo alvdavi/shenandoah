@@ -45,7 +45,7 @@ MemoryUsage ShenandoahGlobalMemoryPool::get_memory_usage() {
   size_t initial   = initial_size();
   size_t max       = max_size();
   size_t used      = used_in_bytes();
-  size_t committed = _heap->committed();
+  size_t committed = _heap->global_generation()->used_regions_size();
 
   // These asserts can never fail: max is stable, and all updates to other values never overflow max.
   assert(initial <= max,    "initial: "   SIZE_FORMAT ", max: "       SIZE_FORMAT, initial,   max);
@@ -62,11 +62,11 @@ MemoryUsage ShenandoahGlobalMemoryPool::get_memory_usage() {
 }
 
 size_t ShenandoahGlobalMemoryPool::used_in_bytes() {
-  return _heap->used();
+  return _heap->global_generation()->used();
 }
 
 size_t ShenandoahGlobalMemoryPool::max_size() const {
-  return _heap->max_capacity();
+  return _heap->global_generation()->max_capacity();
 }
 
 

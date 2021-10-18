@@ -2604,7 +2604,7 @@ void ShenandoahHeap::initialize_serviceability() {
   }
 }
 
-ConcurrentGCMemoryManager* ShenandoahHeap::memory_manager(GenerationMode generation_mode) {
+ShenandoahMemoryManager* ShenandoahHeap::memory_manager(GenerationMode generation_mode) {
   if (_gc_mode->is_generational()) {
     switch (generation_mode) {
       case YOUNG:

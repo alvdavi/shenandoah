@@ -34,6 +34,7 @@
 #include "gc/shenandoah/shenandoahGeneration.hpp"
 #include "gc/shenandoah/shenandoahHeap.inline.hpp"
 #include "gc/shenandoah/shenandoahReferenceProcessor.hpp"
+#include "gc/shenandoah/shenandoahMemoryManager.hpp"
 #include "gc/shenandoah/shenandoahUtils.hpp"
 #include "utilities/debug.hpp"
 
