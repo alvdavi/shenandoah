@@ -82,6 +82,7 @@ public class GcInfo implements CompositeData, CompositeDataView {
     private final long liveInPoolsBeforeGc;
     private final long liveInPoolsAfterGc;
     private final PauseInfo[] pauseInfoArray;
+    private final ConcurrentInfo[] concurrentInfoArray;
     private final Object[] extAttributes;
     private final boolean valid;
     private final CompositeData cdata;
@@ -102,6 +103,8 @@ public class GcInfo implements CompositeData, CompositeDataView {
                    long liveInPoolsAfterGc,
                    PauseInfo[] pauseInfo,
                    int pauseInfoSize,
+                   ConcurrentInfo[] concurrentInfo,
+                   int concurrentInfoSize,
                    boolean valid,
                    Object[] extAttributes) {
         this.builder       = builder;
@@ -126,6 +129,8 @@ public class GcInfo implements CompositeData, CompositeDataView {
         this.liveInPoolsAfterGc = liveInPoolsAfterGc;
         this.pauseInfoArray = new PauseInfo[pauseInfoSize];
         System.arraycopy(pauseInfo, 0, this.pauseInfoArray, 0, pauseInfoSize);
+        this.concurrentInfoArray = new ConcurrentInfo[concurrentInfoSize];
+        System.arraycopy(concurrentInfo, 0, this.concurrentInfoArray, 0, concurrentInfoSize);
         this.valid = valid;
         this.extAttributes = extAttributes;
         try {
@@ -135,39 +140,6 @@ public class GcInfo implements CompositeData, CompositeDataView {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
-    }
-
-
-    private GcInfo(GcInfoBuilder builder,
-                   long index, long startTime, long endTime,
-                   MemoryUsage[] muBeforeGc,
-                   MemoryUsage[] muAfterGc,
-                   Object[] extAttributes) {
-        this.builder       = builder;
-        this.index         = index;
-        this.startTime     = startTime;
-        this.endTime       = endTime;
-        String[] poolNames = builder.getPoolNames();
-        this.usageBeforeGc = new HashMap<String, MemoryUsage>(poolNames.length);
-        this.usageAfterGc = new HashMap<String, MemoryUsage>(poolNames.length);
-        for (int i = 0; i < poolNames.length; i++) {
-            this.usageBeforeGc.put(poolNames[i],  muBeforeGc[i]);
-            this.usageAfterGc.put(poolNames[i],  muAfterGc[i]);
-        }
-        this.gcCause = "Unknown";
-        this.previousEndTime = 0;
-        this.allocatedSincePrevious = 0;
-        this.allocatedDuringCollection = 0;
-        this.copiedBetweenPools = 0;
-        this.garbageFound = 0;
-        this.garbageCollected = 0;
-        this.liveInPoolsBeforeGc = 0;
-        this.liveInPoolsAfterGc = 0;
-        this.pauseInfoArray = new PauseInfo[1];
-        this.pauseInfoArray[0] = new PauseInfo(10, 20, 30, "Uno", 40, 50, 60);
-        this.valid = false;
-        this.extAttributes = extAttributes;
-        this.cdata = new GcInfoCompositeData(this, builder, extAttributes);
     }
 
     private GcInfo(CompositeData cd) {
@@ -190,8 +162,8 @@ public class GcInfo implements CompositeData, CompositeDataView {
         this.liveInPoolsAfterGc        = GcInfoCompositeData.getLiveInPoolsAfterGc(cd);
         this.valid                     = GcInfoCompositeData.isValid(cd);
 
-        this.pauseInfoArray = new PauseInfo[1];
-        this.pauseInfoArray[0] = new PauseInfo(11, 22, 33, "Alpha", 44, 55, 66);
+        this.pauseInfoArray = null;
+        this.concurrentInfoArray = null;
         this.extAttributes = null;
         this.builder       = null;
         this.cdata         = cd;
@@ -609,6 +581,17 @@ public class GcInfo implements CompositeData, CompositeDataView {
      */
     public List<PauseInfo> getPauseInfo() {
         return java.util.Collections.unmodifiableList(Arrays.asList(pauseInfoArray));
+    }
+
+    /**
+     * A {@link List} of {@link ConcurrentInfo} for the concurrent
+     * phases of this collection.
+     *
+     * @return a List of {@link ConcurrentInfo} for the concurrent
+     *         phases of this collection.
+     */
+    public List<ConcurrentInfo> getConcurrentInfo() {
+        return java.util.Collections.unmodifiableList(Arrays.asList(concurrentInfoArray));
     }
 
    /**

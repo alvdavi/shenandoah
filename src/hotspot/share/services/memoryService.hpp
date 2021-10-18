@@ -36,6 +36,7 @@
 class MemoryPool;
 class MemoryManager;
 class GCPauseStatInfo;
+class GCConcurrentStatInfo;
 class GCMemoryManager;
 class ConcurrentGCMemoryManager;
 class CollectedHeap;
@@ -115,6 +116,8 @@ public:
   static Handle create_MemoryUsage_obj(MemoryUsage usage, TRAPS);
   // Create an instance of com/sun/management/PauseInfo
   static Handle create_PauseInfo_obj(GCPauseStatInfo usage, TRAPS);
+  // Create an instance of com/sun/management/ConcurrentInfo
+  static Handle create_ConcurrentInfo_obj(GCConcurrentStatInfo usage, TRAPS);
 };
 
 class TraceMemoryManagerStats : public StackObj {
@@ -191,6 +194,32 @@ public:
                           bool cyclePause = false);
 
   ~TraceMemoryManagerPauseStats();
+};
+
+class TraceMemoryManagerConcurrentStats : public StackObj {
+private:
+  ConcurrentGCMemoryManager* _gc_memory_manager;
+  int                        _phaseIndex;
+  const char*                _phaseName;
+  bool                       _recordIndividualPhases;
+  bool                       _recordDuration;
+  bool                       _recordPhaseName;
+
+public:
+  TraceMemoryManagerConcurrentStats() {}
+  TraceMemoryManagerConcurrentStats(ConcurrentGCMemoryManager* gc_memory_manager,
+                          const char* phase_name,
+                          bool recordIndividualPauses = false, 
+                          bool recordDuration = false,
+                          bool recordPhaseName = false);
+
+  void initialize(ConcurrentGCMemoryManager* gc_memory_manager,
+                          const char* phase_name,
+                          bool recordIndividualPauses = false, 
+                          bool recordDuration = false,
+                          bool recordPhaseName = false);
+
+  ~TraceMemoryManagerConcurrentStats();
 };
 
 #endif // SHARE_SERVICES_MEMORYSERVICE_HPP

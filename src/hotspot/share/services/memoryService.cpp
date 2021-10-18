@@ -239,6 +239,26 @@ Handle MemoryService::create_PauseInfo_obj(GCPauseStatInfo info, TRAPS) {
 
 }
 
+Handle MemoryService::create_ConcurrentInfo_obj(GCConcurrentStatInfo info, TRAPS) {
+  InstanceKlass* ik = Management::com_sun_management_ConcurrentInfo_klass(CHECK_NH);
+  
+  Handle phase_name = java_lang_String::create_from_str(info.get_phase_name(), CHECK_NH);
+
+  JavaCallArguments args(10);
+  args.push_long(info.get_index());
+  args.push_long(info.get_start_time());
+  args.push_long(info.get_end_time());
+  args.push_long(info.get_max_threads());
+  args.push_oop(phase_name);
+
+  return JavaCalls::construct_new_instance(
+                        ik,
+                        vmSymbols::com_sun_management_ConcurrentInfo_constructor_signature(),
+                        &args,
+                        CHECK_NH);
+
+}
+
 TraceMemoryManagerStats::TraceMemoryManagerStats(GCMemoryManager* gc_memory_manager,
                                                  GCCause::Cause cause,
                                                  bool allMemoryPoolsAffected,
@@ -326,4 +346,33 @@ TraceMemoryManagerPauseStats::~TraceMemoryManagerPauseStats() {
   _gc_memory_manager->pause_end(_pauseType, _recordAccumulatedPauseTime, _countPauses, _recordIndividualPauses, 
                                   _recordDuration, _recordOperationTime, _recordPauseType, _cyclePause);
 }
+
+TraceMemoryManagerConcurrentStats::TraceMemoryManagerConcurrentStats(ConcurrentGCMemoryManager* gc_memory_manager,
+                          const char* phaseName,
+                          bool recordIndividualPhases, 
+                          bool recordDuration,
+                          bool recordPhaseName) {
+  initialize(gc_memory_manager, phaseName, recordIndividualPhases, recordDuration,
+             recordPhaseName);
+}
+
+void TraceMemoryManagerConcurrentStats::initialize(ConcurrentGCMemoryManager* gc_memory_manager,
+                          const char* phaseName,
+                          bool recordIndividualPhases, 
+                          bool recordDuration,
+                          bool recordPhaseName) {
+  _gc_memory_manager = gc_memory_manager;
+  _phaseName = phaseName;
+  _recordIndividualPhases = _recordIndividualPhases;
+  _recordDuration = recordDuration;
+  _recordPhaseName = recordPhaseName;
+  _phaseIndex = _gc_memory_manager->concurrent_phase_begin(_phaseName, _recordIndividualPhases, _recordDuration,
+                                                           _recordPhaseName);
+}
+
+TraceMemoryManagerConcurrentStats::~TraceMemoryManagerConcurrentStats() {
+  _gc_memory_manager->concurrent_phase_end(_phaseIndex, _phaseName, _recordIndividualPhases, _recordDuration,
+                                           _recordPhaseName);
+}
+
 

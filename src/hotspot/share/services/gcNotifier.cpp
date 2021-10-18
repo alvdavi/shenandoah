@@ -48,8 +48,9 @@ void GCNotifier::pushNotification(GCMemoryManager *mgr, const char *action, cons
   // GC may occur between now and the creation of the notification
   int num_pools = MemoryService::num_memory_pools();
   int max_pauses = mgr->max_pauses_per_cycle();
+  int max_concurrent_phases = mgr->max_concurrent_phases_per_cycle();
   // stat is deallocated inside GCNotificationRequest
-  GCStatInfo* stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(num_pools, max_pauses);
+  GCStatInfo* stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(num_pools, max_pauses, max_concurrent_phases);
   mgr->get_last_gc_stat(stat);
   // timestamp is current time in ms
   GCNotificationRequest *request = new GCNotificationRequest(os::javaTimeMillis(),mgr,action,cause,stat);
@@ -143,7 +144,18 @@ static Handle createGcInfo(GCMemoryManager *gcManager, GCStatInfo *gcStatInfo,TR
     pause_info_ah->obj_at_put(i, pause_info());
   }
 
-  // Convert the pause type
+  // Fill the array of ConcurrentInfo
+  InstanceKlass* ci_klass = Management::com_sun_management_ConcurrentInfo_klass(CHECK_NH);
+
+  objArrayOop ci = oopFactory::new_objArray(ci_klass, gcStatInfo->concurrent_array_used(), CHECK_NH);
+  objArrayHandle concurrent_info_ah(THREAD, ci);
+
+  for (int i = 0; i < gcStatInfo->concurrent_array_used(); i++) {
+    Handle concurrent_info = MemoryService::create_ConcurrentInfo_obj(gcStatInfo->concurrent_stat_info_for_index(i), CHECK_NH);
+    concurrent_info_ah->obj_at_put(i, concurrent_info());
+  }
+
+  // Convert the gc cause
   Handle cause = java_lang_String::create_from_str(gcStatInfo->get_gc_cause(), CHECK_NH);
 
   // Current implementation only has 1 attribute (number of GC threads)
@@ -163,7 +175,7 @@ static Handle createGcInfo(GCMemoryManager *gcManager, GCStatInfo *gcStatInfo,TR
 
   InstanceKlass* gcInfoklass = Management::com_sun_management_GcInfo_klass(CHECK_NH);
 
-  JavaCallArguments constructor_args(36);
+  JavaCallArguments constructor_args(39);
   constructor_args.push_oop(getGcInfoBuilder(gcManager,THREAD));
   constructor_args.push_long(gcStatInfo->gc_index());
   constructor_args.push_long(Management::ticks_to_ns(gcStatInfo->start_time()));
@@ -181,6 +193,8 @@ static Handle createGcInfo(GCMemoryManager *gcManager, GCStatInfo *gcStatInfo,TR
   constructor_args.push_long(gcStatInfo->get_live_in_pools_after_gc());
   constructor_args.push_oop(pause_info_ah);
   constructor_args.push_int(gcStatInfo->pause_array_used());
+  constructor_args.push_oop(concurrent_info_ah);
+  constructor_args.push_int(gcStatInfo->concurrent_array_used());
   constructor_args.push_int(JNI_TRUE);
   constructor_args.push_oop(extra_array);
 

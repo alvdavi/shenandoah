@@ -27,7 +27,6 @@ package com.sun.management.internal;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;
-import com.sun.management.GcDetails;
 import com.sun.management.GcInfo;
 
 import java.lang.management.MemoryPoolMXBean;

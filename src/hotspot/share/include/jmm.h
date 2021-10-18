@@ -90,7 +90,9 @@ typedef enum {
   JMM_GC_PAUSE_COUNT                 = 13,   /* Total number of stop the world pauses */
   JMM_GC_RUNNING_TIME_NS             = 14,   /* Total accumulated time spent in pauses (nanos) */
   JMM_GC_THREADS                     = 15,   /* Total number of threads for the garbage collector */
-  JMM_GC_MAX_PAUSES_PER_CYCLE        = 16,    /* Maximun possible amount of pauses per gc cycle */
+  JMM_GC_MAX_PAUSES_PER_CYCLE        = 16,   /* Maximum possible amount of pauses per gc cycle */
+  JMM_GC_MAX_CONCURRENT_PHASES_PER_CYCLE = 17, /* Maximum possible amount of concurrent phases per gc cycle */
+
   /***********************************
    * Shenandoah metrics changes ends *
    ***********************************/
@@ -223,10 +225,8 @@ typedef struct {
   jlong        liveInPoolsAfterGc;             /* LiveInPoolsAfterGc */
   jobjectArray pause_info;                     /* Pause info array */
   jint         num_pauses;                     /* Number of pause entries in the array */
-  
-
-
-
+  jobjectArray concurrent_info;                /* Concurrent phase info array */
+  jint         num_concurrent_phases;          /* Number of concurrent phase entries in the array */
 } jmmGCStat;
 
 typedef struct {

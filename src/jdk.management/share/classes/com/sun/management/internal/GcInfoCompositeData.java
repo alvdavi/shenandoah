@@ -39,6 +39,7 @@ import javax.management.openmbean.TabularData;
 import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.OpenDataException;
+import com.sun.management.ConcurrentInfo;
 import com.sun.management.GcInfo;
 import com.sun.management.PauseInfo;
 import java.security.AccessController;
@@ -144,6 +145,7 @@ public class GcInfoCompositeData extends LazyCompositeData {
                 info.getAllocatedDuringCollection(),
                 info.getAllocatedBetweenEndOfPreviousAndStart(),
                 getPauseInfoOpenDataArray(info.getPauseInfo()),
+                getConcurrentInfoOpenDataArray(info.getConcurrentInfo())
             };
         } catch (OpenDataException e) {
         
@@ -191,6 +193,14 @@ public class GcInfoCompositeData extends LazyCompositeData {
         return cda;
     }
 
+    private CompositeData[] getConcurrentInfoOpenDataArray(List<ConcurrentInfo> concurrentInfoList) {
+        CompositeData[] cda = new CompositeData[concurrentInfoList.size()];
+        for (int i = 0; i < concurrentInfoList.size(); i++) {
+            cda[i] = concurrentInfoList.get(i).toCompositeData(null);
+        }
+        return cda;
+    }
+
     private static final String ID                     = "id";
     private static final String START_TIME             = "startTime";
     private static final String END_TIME               = "endTime";
@@ -230,6 +240,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
     private static final String ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START  = "allocatedBetweenEndOfPreviousAndStart";
 
     private static final String PAUSE_INFO                                   = "pauseInfo";
+    private static final String CONCURRENT_INFO                              = "concurrentInfo";
+
 
 
     private static final String[] baseGcInfoItemNames = {
@@ -269,7 +281,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
         PREVIOUS_END_TIME_SECONDS,
         ALLOCATED_DURING_COLLECTION,
         ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START,
-        PAUSE_INFO  
+        PAUSE_INFO,
+        CONCURRENT_INFO
     };
 
 
@@ -294,6 +307,16 @@ public class GcInfoCompositeData extends LazyCompositeData {
             throw new AssertionError(e);
         } 
     }   
+
+    private static OpenType<?> concurrentInfoArrayType;
+    static {
+       try {
+        concurrentInfoArrayType = ArrayType.getArrayType(ConcurrentInfoCompositeData.getConcurrentInfoCompositeType());
+       } catch (OpenDataException e) {
+           // Should never reach here
+           throw new AssertionError(e);
+       } 
+   }  
 
     static String[] getBaseGcInfoItemNames() {
         return baseGcInfoItemNames;
@@ -342,7 +365,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
                 SimpleType.LONG,       // ALLOCATED_DURING_COLLECTION
                 SimpleType.LONG,       // ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START 
                 
-                pauseInfoArrayType,    // PAUSE_INFO
+                pauseInfoArrayType,      // PAUSE_INFO
+                concurrentInfoArrayType  // CONCURRENT_INFO
             };
         }
         return baseGcInfoItemTypes;

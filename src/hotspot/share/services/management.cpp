@@ -79,6 +79,7 @@ InstanceKlass* Management::_garbageCollectorExtImpl_klass = NULL;
 InstanceKlass* Management::_garbageCollectorMXBean_klass = NULL;
 InstanceKlass* Management::_gcInfo_klass = NULL;
 InstanceKlass* Management::_pauseInfo_klass = NULL;
+InstanceKlass* Management::_concurrentInfo_klass = NULL;
 InstanceKlass* Management::_managementFactoryHelper_klass = NULL;
 InstanceKlass* Management::_memoryManagerMXBean_klass = NULL;
 InstanceKlass* Management::_memoryPoolMXBean_klass = NULL;
@@ -294,6 +295,12 @@ InstanceKlass* Management::com_sun_management_PauseInfo_klass(TRAPS) {
   return _pauseInfo_klass;
 }
 
+InstanceKlass* Management::com_sun_management_ConcurrentInfo_klass(TRAPS) {
+  if (_concurrentInfo_klass == NULL) {
+    _concurrentInfo_klass = load_and_initialize_klass(vmSymbols::com_sun_management_ConcurrentInfo(), CHECK_NULL);
+  }
+  return _concurrentInfo_klass;
+}
 
 InstanceKlass* Management::com_sun_management_internal_DiagnosticCommandImpl_klass(TRAPS) {
   if (_diagnosticCommandImpl_klass == NULL) {
@@ -836,6 +843,9 @@ static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
   case JMM_GC_MAX_PAUSES_PER_CYCLE:
     return mgr->max_pauses_per_cycle();
 
+  case JMM_GC_MAX_CONCURRENT_PHASES_PER_CYCLE:
+    return mgr->max_concurrent_phases_per_cycle();
+  
   case JMM_GC_EXT_ATTRIBUTE_INFO_SIZE:
     return mgr->ext_attribute_info_size();
 
@@ -1862,6 +1872,31 @@ static objArrayOop get_pause_info_objArray(jobjectArray array, int length, TRAPS
   return array_h();
 }
 
+static objArrayOop get_concurrent_info_objArray(jobjectArray array, int length, TRAPS) {
+  if (array == NULL) {
+    THROW_(vmSymbols::java_lang_NullPointerException(), 0);
+  }
+
+  objArrayOop oa = objArrayOop(JNIHandles::resolve_non_null(array));
+  objArrayHandle array_h(THREAD, oa);
+
+  // array must be of the given length
+  if (length != array_h->length()) {
+    THROW_MSG_(vmSymbols::java_lang_IllegalArgumentException(),
+               "The length of the given ConcurrentInfo array does not match the number of concurrent.", 0);
+  }
+
+  // check if the element of array is of type MemoryUsage class
+  Klass* concurrent_info_klass = Management::com_sun_management_ConcurrentInfo_klass(CHECK_NULL);
+  Klass* element_klass = ObjArrayKlass::cast(array_h->klass())->element_klass();
+  if (element_klass != concurrent_info_klass) {
+    THROW_MSG_(vmSymbols::java_lang_IllegalArgumentException(),
+               "The element type is not ConcurrentInfo class", 0);
+  }
+
+  return array_h();
+}
+
 // Gets the statistics of the last GC of a given GC memory manager.
 // Input parameters:
 //   obj     - GarbageCollectorMXBean object
@@ -1896,7 +1931,8 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
   // GC may occur while constructing the last GC information
   int num_pools = MemoryService::num_memory_pools();
   int max_pauses = mgr->max_pauses_per_cycle();
-  GCStatInfo stat(num_pools, max_pauses);
+  int max_concurrent_phases = mgr->max_concurrent_phases_per_cycle();
+  GCStatInfo stat(num_pools, max_pauses, max_concurrent_phases);
   if (mgr->get_last_gc_stat(&stat) == 0) {
     gc_stat->gc_index = 0;
     return;
@@ -1921,6 +1957,7 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
   gc_stat->liveInPoolsBeforeGc = stat.get_live_in_pools_before_gc();
   gc_stat->liveInPoolsAfterGc = stat.get_live_in_pools_after_gc();
   gc_stat->num_pauses = stat.pause_array_used();
+  gc_stat->num_concurrent_phases = stat.concurrent_array_used();
 
 
   // Current implementation does not have GC extension attributes
@@ -1964,6 +2001,17 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
     Handle pause_info = MemoryService::create_PauseInfo_obj(stat.pause_stat_info_for_index(i), CHECK);
 
     pause_info_ah->obj_at_put(i, pause_info());
+  }
+
+  // Fill the array of ConcurrentInfo
+  objArrayOop ci = get_concurrent_info_objArray(gc_stat->concurrent_info, max_concurrent_phases, CHECK);
+
+  objArrayHandle concurrent_info_ah(THREAD, ci);
+
+  for (int i = 0; i < gc_stat->num_concurrent_phases; i++) {
+    Handle concurrent_info = MemoryService::create_ConcurrentInfo_obj(stat.concurrent_stat_info_for_index(i), CHECK);
+
+    concurrent_info_ah->obj_at_put(i, concurrent_info());
   }
 
 

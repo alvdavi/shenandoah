@@ -145,17 +145,27 @@ GCPauseStatInfo::GCPauseStatInfo() :
   _end_time(0L),
   _operation_start_time(0L),
   _operation_end_time(0L),
-  _pause_type("Unkown"),
+  _pause_type("Unknown"),
   _max_threads(0L)
   {}
 
-GCStatInfo::GCStatInfo(int num_pools, int max_pauses) {
+GCConcurrentStatInfo::GCConcurrentStatInfo() :
+  _index(0),
+  _start_time(0L),
+  _end_time(0L),
+  _phase_name("Unknown"),
+  _max_threads(0L)
+  {}
+
+GCStatInfo::GCStatInfo(int num_pools, int max_pauses, int max_concurrent_cycles) {
   // initialize the arrays for memory usage
   _before_gc_usage_array = NEW_C_HEAP_ARRAY(MemoryUsage, num_pools, mtInternal);
   _after_gc_usage_array  = NEW_C_HEAP_ARRAY(MemoryUsage, num_pools, mtInternal);
   _usage_array_size = num_pools;
   _pause_stat_info_array = NEW_C_HEAP_ARRAY(GCPauseStatInfo, max_pauses, mtInternal);
   _pause_array_size = max_pauses;
+  _concurrent_stat_info_array = NEW_C_HEAP_ARRAY(GCConcurrentStatInfo, max_concurrent_cycles, mtInternal);
+  _concurrent_array_size = max_concurrent_cycles;
 
   clear();
 }
@@ -164,6 +174,7 @@ GCStatInfo::~GCStatInfo() {
   FREE_C_HEAP_ARRAY(MemoryUsage*, _before_gc_usage_array);
   FREE_C_HEAP_ARRAY(MemoryUsage*, _after_gc_usage_array);
   FREE_C_HEAP_ARRAY(GCPauseStatInfo*, _pause_stat_info_array);
+  FREE_C_HEAP_ARRAY(GCConcurrentStatInfo*, _concurrent_stat_info_array);
 }
 
 void GCStatInfo::set_gc_usage(int pool_index, MemoryUsage usage, bool before_gc) {
@@ -201,6 +212,8 @@ void GCStatInfo::clear() {
   _live_in_pools_after_gc = 0l;
   for (int i = 0; i < _pause_array_size; i++) ::new (&_pause_stat_info_array[i]) GCPauseStatInfo();
   _pause_array_used = 0;
+  for (int i = 0; i < _concurrent_array_size; i++) ::new (&_concurrent_stat_info_array[i]) GCConcurrentStatInfo();
+  _concurrent_array_used = 0;
 }
 
 
@@ -232,8 +245,8 @@ void GCMemoryManager::add_pool(MemoryPool* pool, bool always_affected_by_gc) {
 
 void GCMemoryManager::initialize_gc_stat_info() {
   assert(MemoryService::num_memory_pools() > 0, "should have one or more memory pools");
-  _last_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle());
-  _current_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle());
+  _last_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle(), max_concurrent_phases_per_cycle());
+  _current_gc_stat = new(ResourceObj::C_HEAP, mtGC) GCStatInfo(MemoryService::num_memory_pools(), max_pauses_per_cycle(), max_concurrent_phases_per_cycle());
   // tracking concurrent collections we need two objects: one to update, and one to
   // hold the publicly available "last (completed) gc" information.
 }
@@ -385,6 +398,12 @@ size_t GCMemoryManager::get_last_gc_stat(GCStatInfo* dest) {
     size_t pause_len = _last_gc_stat->pause_array_used() * sizeof(GCPauseStatInfo);
     memcpy(dest->pause_stat_info_array(), _last_gc_stat->pause_stat_info_array(), pause_len);
     dest->set_pause_array_used(_last_gc_stat->pause_array_used());
+
+    assert(dest->concurrent_array_size() == _last_gc_stat->concurrent_array_size(),
+           "Must have same array size");
+    size_t concurrent_phase_len = _last_gc_stat->concurrent_array_used() * sizeof(GCConcurrentStatInfo);
+    memcpy(dest->concurrent_stat_info_array(), _last_gc_stat->concurrent_stat_info_array(), concurrent_phase_len);
+    dest->set_concurrent_array_used(_last_gc_stat->concurrent_array_used());
   }
   return _last_gc_stat->gc_index();
 }
@@ -467,6 +486,41 @@ void ConcurrentGCMemoryManager::pause_end(const char* pauseType, bool recordAccu
     }
   }
 }
+
+int ConcurrentGCMemoryManager::concurrent_phase_begin(const char* phaseName, bool recordIndividualPhase,
+                                                       bool recordDuration, bool recordPhaseName) {
+  if (recordIndividualPhase && max_concurrent_phases_per_cycle() > 0) {
+    int phase_index = _current_gc_stat->new_concurrent_phase();
+    assert(phase_index < _current_gc_stat->concurrent_array_size(),
+        "Concurrent phase happened beyond the max concurrent phases per cycle defined");
+    GCConcurrentStatInfo* stat_info = _current_gc_stat->concurrent_stat_info_array();
+    stat_info[phase_index].set_index(phase_index);
+
+    if (recordDuration) {
+      stat_info[phase_index].set_start_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+
+    if (recordPhaseName) {
+      stat_info[phase_index].set_phase_name(phaseName);
+    }
+    return phase_index;
+  }
+  return 0;
+}
+
+void ConcurrentGCMemoryManager::concurrent_phase_end(int phaseIndex, const char* phaseName, bool recordIndividualPhase,
+                                                       bool recordDuration, bool recordPhaseName) {
+  if (recordIndividualPhase && max_concurrent_phases_per_cycle() > 0) {
+    assert(phaseIndex < _current_gc_stat->concurrent_array_size(),
+        "Concurrent phase happened beyond the max concurrent phases per cycle defined");
+    GCConcurrentStatInfo* stat_info = _current_gc_stat->concurrent_stat_info_array();
+
+    if (recordDuration) {
+      stat_info[phaseIndex].set_end_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+  }
+}
+                                                      
 
 void ConcurrentGCMemoryManager::reset_gc_stat() {
   GCMemoryManager::reset_gc_stat();

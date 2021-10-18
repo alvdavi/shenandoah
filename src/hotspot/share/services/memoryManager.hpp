@@ -122,6 +122,32 @@ public:
   void set_operation_end_time(jlong operation_end_time)      { _operation_end_time = operation_end_time; }
 };
 
+class GCConcurrentStatInfo {
+private:
+  //
+  // General properties
+  size_t _index;
+  jlong  _start_time;
+  jlong  _end_time;
+
+  const char* _phase_name;
+  size_t _max_threads;
+
+public:
+  GCConcurrentStatInfo();
+  size_t get_index()                   { return _index; }
+  jlong get_start_time()               { return _start_time; }
+  jlong get_end_time()                 { return _end_time; }
+  const char* get_phase_name()         { return _phase_name; }
+  size_t get_max_threads()             { return _max_threads; }
+
+  void set_index(size_t index)                  { _index = index; }
+  void set_start_time(jlong start_time)         { _start_time = start_time; }
+  void set_end_time(jlong end_time)             { _end_time = end_time; }
+  void set_phase_name(const char* phase_name)   { _phase_name = phase_name; }
+  void set_max_threads(size_t max_threads)      { _max_threads = max_threads; }
+};
+
 
 class GCStatInfo : public ResourceObj {
 private:
@@ -162,16 +188,20 @@ private:
   jlong _live_in_pools_before_gc;
   jlong _live_in_pools_after_gc;
 
+  // Pause phase information
   GCPauseStatInfo* _pause_stat_info_array;
   int              _pause_array_size;
   int              _pause_array_used;
 
-  ///**
+  // Concurrent phase information
+  GCConcurrentStatInfo* _concurrent_stat_info_array;
+  int                   _concurrent_array_size;
+  volatile int          _concurrent_array_used;
 
   void set_gc_usage(int pool_index, MemoryUsage, bool before_gc);
 
 public:
-  GCStatInfo(int num_pools, int max_pauses);
+  GCStatInfo(int num_pools, int max_pauses, int max_concurrent_phases);
   ~GCStatInfo();
 
   size_t gc_index()               { return _index; }
@@ -214,7 +244,14 @@ public:
     return _pause_stat_info_array[pause_index];
   }
 
-
+  GCConcurrentStatInfo* concurrent_stat_info_array() { return _concurrent_stat_info_array; }
+  int concurrent_array_size()                        { return _concurrent_array_size; }
+  int concurrent_array_used()                        { return _concurrent_array_used; }
+  int new_concurrent_phase()                         { return Atomic::fetch_and_add(&_concurrent_array_used, 1); }
+  GCConcurrentStatInfo concurrent_stat_info_for_index(int concurrent_phase_index) {
+    assert(concurrent_phase_index >= 0 && concurrent_phase_index < _concurrent_array_used, "Range checking");
+    return _concurrent_stat_info_array[concurrent_phase_index];
+  }
 
   void set_index(size_t index)    { _index = index; }
   void set_start_time(jlong time) { _start_time = time; }
@@ -243,6 +280,7 @@ public:
   void set_live_in_pools_before_gc(jlong live_in_pools_before_gc)         { _live_in_pools_before_gc = live_in_pools_before_gc; }
   void set_live_in_pools_after_gc(jlong live_in_pools_after_gc)           { _live_in_pools_after_gc = live_in_pools_after_gc; }
   void set_pause_array_used(int pause_array_used)                         { _pause_array_used = pause_array_used; }
+  void set_concurrent_array_used(int concurrent_array_used)               { _concurrent_array_used = concurrent_array_used; }
 
   void clear();
 };
@@ -284,6 +322,7 @@ public:
   virtual jlong  gc_running_time_ns()      { return _accumulated_timer.nanoseconds(); }
   virtual size_t gc_pause_count()          { return _num_collections; }
   virtual int max_pauses_per_cycle()       { return 0; }
+  virtual int max_concurrent_phases_per_cycle() { return 0;}
   int    num_gc_threads()               { return _num_gc_threads; }
   void   set_num_gc_threads(int count)  { _num_gc_threads = count; }
 
@@ -325,6 +364,12 @@ public:
   void   pause_end(const char* pauseType, bool recordAccumulatedPauseTime, 
                      bool countPauses, bool recordIndividualPauses, bool recordDuration, 
                      bool recordOperationTime, bool recordPauseType, bool cyclePause);
+
+  int concurrent_phase_begin(const char* phaseName, bool recordIndividualPhase, bool recordDuration,
+                              bool recordPhaseName);
+
+  void concurrent_phase_end(int phaseIndex, const char* phaseName, bool recordIndividualPhase, bool recordDuration,
+                              bool recordPhaseName);
   
   virtual void reset_gc_stat() override;
 };

@@ -30,6 +30,7 @@ import javax.management.openmbean.OpenType;
 import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenDataException;
+import com.sun.management.ConcurrentInfo;
 import com.sun.management.GcInfo;
 import com.sun.management.PauseInfo;
 import sun.management.Util;
@@ -74,10 +75,11 @@ public class GcInfoBuilder {
         MemoryUsage[] usageBeforeGC = new MemoryUsage[poolNames.length];
         MemoryUsage[] usageAfterGC = new MemoryUsage[poolNames.length];
         PauseInfo[] pauseInfo = new PauseInfo[getMaxPausesPerCycle(gc)];
+        ConcurrentInfo[] concurrentInfo = new ConcurrentInfo[getMaxConcurrentPhasesPerCycle(gc)];
         Object[] values = new Object[gcExtItemCount];
 
         return getLastGcInfo0(gc, gcExtItemCount, values, gcExtItemTypes,
-                              usageBeforeGC, usageAfterGC, pauseInfo);
+                              usageBeforeGC, usageAfterGC, pauseInfo, concurrentInfo);
     }
 
     public String[] getPoolNames() {
@@ -186,6 +188,8 @@ public class GcInfoBuilder {
                                             String[] descriptions);
 
     private native int getMaxPausesPerCycle(GarbageCollectorMXBean gc);
+    private native int getMaxConcurrentPhasesPerCycle(GarbageCollectorMXBean gc);
+
 
 
     /**
@@ -196,6 +200,8 @@ public class GcInfoBuilder {
      * @param extAttValues Values of extension attributes to be filled.
      * @param before Memory usage before GC to be filled.
      * @param after Memory usage after GC to be filled.
+     * @param pauseInfo PauseInfo array to be filled.
+     * @param concurrentInfo ConcurrentInfo array to be filled.
      */
     private native GcInfo getLastGcInfo0(GarbageCollectorMXBean gc,
                                          int numExtAtts,
@@ -203,5 +209,6 @@ public class GcInfoBuilder {
                                          char[] extAttTypes,
                                          MemoryUsage[] before,
                                          MemoryUsage[] after,
-                                         PauseInfo[] pauseInfo);
+                                         PauseInfo[] pauseInfo,
+                                         ConcurrentInfo[] concurrentInfo);
 }

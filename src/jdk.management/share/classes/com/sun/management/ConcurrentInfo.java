@@ -29,6 +29,7 @@ package com.sun.management;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeDataView;
 import javax.management.openmbean.CompositeType;
+import com.sun.management.internal.ConcurrentInfoCompositeData;
 
 import java.lang.String;
 
@@ -37,22 +38,37 @@ import java.lang.String;
  * within a garbage collection. It includes a timestamp specifying
  * the time since the launch of the Java virtual machine process,
  * the wall clock time duration of the phase, plus additional,
- * optional, very detailed information.
+ * optional information.
  *
  * @author Paul Hohensee
  * @since  18
  */
-public class ConcurrentInfo implements PhaseInfo /*, CompositeDataView*/ {
+public class ConcurrentInfo implements PhaseInfo, CompositeDataView {
     private final long index;
     private final long startTime;
     private final long endTime;
     private final long threadCount;
+    private final String phaseName;
+    private final CompositeData cdata;
 
-    public ConcurrentInfo(long index, long startTime, long endTime, long threadCount) {
+    public ConcurrentInfo(long index, long startTime, long endTime, long threadCount, String phaseName) {
 	    this.index = index;
         this.startTime = startTime;
         this.endTime = endTime;
         this.threadCount = threadCount;
+        this.phaseName = phaseName;
+        this.cdata = new ConcurrentInfoCompositeData(this);
+    }
+
+    public ConcurrentInfo(CompositeData cd) {
+        ConcurrentInfoCompositeData.validateCompositeData(cd);
+
+        this.index         = ConcurrentInfoCompositeData.getId(cd);
+        this.startTime     = ConcurrentInfoCompositeData.getStartTimeNanos(cd);
+        this.endTime       = ConcurrentInfoCompositeData.getEndTimeNanos(cd);
+        this.threadCount   = ConcurrentInfoCompositeData.getThreadCount(cd);
+        this.phaseName     = ConcurrentInfoCompositeData.getPhaseName(cd);
+        this.cdata         = cd;
     }
 
     @Override
@@ -78,5 +94,37 @@ public class ConcurrentInfo implements PhaseInfo /*, CompositeDataView*/ {
     @Override
     public long getPhaseGarbageCollectorThreadCount() {
         return threadCount;
+    }
+
+    /**
+     * The name of this phase.
+     *
+     * @return a{@code String} representing the name of this phase.
+     */
+    public String getPhaseName() {
+        return phaseName;
+    }
+
+    /**
+     * Return the {@code CompositeData} representation of this
+     * {@code ConcurrentInfo}, including any phase-specific attributes. 
+     * The returned value will have at least all the attributes described
+     * in the {@link #from(CompositeData) from} method.
+     *
+     * @param ct the {@code CompositeType} that the caller expects.
+     * This parameter is ignored and can be null.
+     *
+     * @return the {@code CompositeData} representation.
+     */
+    public CompositeData toCompositeData(CompositeType ct) {
+        return cdata;
+    }
+
+    public static ConcurrentInfo from(CompositeData cd) {
+        if (cd == null) {
+            return null;
+        }
+
+        return new ConcurrentInfo(cd);
     }
 }
