@@ -2560,7 +2560,7 @@ void ShenandoahHeap::safepoint_synchronize_end() {
 
 void ShenandoahHeap::entry_uncommit(double shrink_before, size_t shrink_until) {
   static const char *msg = "Concurrent uncommit";
-  ShenandoahConcurrentPhase gc_phase(msg, ShenandoahPhaseTimings::conc_uncommit, true /* log_heap_usage */);
+  ShenandoahConcurrentPhase gc_phase(msg, ShenandoahPhaseTimings::conc_uncommit, "Uncommit", GLOBAL, true /* log_heap_usage */);
   EventMark em("%s", msg);
 
   op_uncommit(shrink_before, shrink_until);

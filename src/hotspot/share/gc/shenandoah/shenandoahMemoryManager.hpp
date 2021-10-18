@@ -52,6 +52,7 @@ public:
   virtual void report_garbage(jlong found, jlong collected);
   
   virtual int max_pauses_per_cycle() override { return 4; }
+  virtual int max_concurrent_phases_per_cycle() override { return 15; }
 };
 
 class ShenandoahGlobalMemoryManager : public ShenandoahMemoryManager {

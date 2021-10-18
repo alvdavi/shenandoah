@@ -102,9 +102,10 @@ class ShenandoahConcurrentPhase : public ShenandoahTimingsTracker {
 private:
   GCTraceTimeWrapper<LogLevel::Info, LOG_TAGS(gc)> _tracer;
   ConcurrentGCTimer* const _timer;
+  TraceMemoryManagerConcurrentStats  _trace_gc_concurrent_stats;
 
 public:
-  ShenandoahConcurrentPhase(const char* title, ShenandoahPhaseTimings::Phase phase, bool log_heap_usage = false);
+  ShenandoahConcurrentPhase(const char* title, ShenandoahPhaseTimings::Phase phase, const char* phaseName, GenerationMode generation_mode, bool log_heap_usage = false);
   ~ShenandoahConcurrentPhase();
 };
 

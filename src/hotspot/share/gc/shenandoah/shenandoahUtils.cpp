@@ -125,11 +125,17 @@ ShenandoahPausePhase::~ShenandoahPausePhase() {
   _timer->register_gc_pause_end();
 }
 
-ShenandoahConcurrentPhase::ShenandoahConcurrentPhase(const char* title, ShenandoahPhaseTimings::Phase phase, bool log_heap_usage) :
+ShenandoahConcurrentPhase::ShenandoahConcurrentPhase(const char* title, ShenandoahPhaseTimings::Phase phase, const char* phaseName, GenerationMode generation_mode, bool log_heap_usage) :
   ShenandoahTimingsTracker(phase),
   _tracer(title, NULL, GCCause::_no_gc, log_heap_usage),
   _timer(ShenandoahHeap::heap()->gc_timer()) {
+  ShenandoahHeap* const heap = ShenandoahHeap::heap();
   _timer->register_gc_concurrent_start(title);
+  _trace_gc_concurrent_stats.initialize(heap->memory_manager(generation_mode),
+          /* phaseName = */               phaseName, 
+          /* recordIndividualPhases = */  true,
+          /* bool recordDuration = */     true,
+          /* bool recordPhaseName */      true);
 }
 
 ShenandoahConcurrentPhase::~ShenandoahConcurrentPhase() {
