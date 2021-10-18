@@ -31,6 +31,7 @@
 #include "gc/shenandoah/shenandoahFullGC.hpp"
 #include "gc/shenandoah/shenandoahGeneration.hpp"
 #include "gc/shenandoah/shenandoahHeap.inline.hpp"
+#include "gc/shenandoah/shenandoahMemoryManager.hpp"
 #include "gc/shenandoah/shenandoahMetrics.hpp"
 #include "gc/shenandoah/shenandoahMonitoringSupport.hpp"
 #include "gc/shenandoah/shenandoahOopClosures.inline.hpp"
@@ -56,8 +57,19 @@ bool ShenandoahDegenGC::collect(GCCause::Cause cause) {
 }
 
 void ShenandoahDegenGC::vmop_degenerated() {
-  TraceCollectorStats tcs(ShenandoahHeap::heap()->monitoring_support()->full_stw_collection_counters());
+  ShenandoahHeap* const heap = ShenandoahHeap::heap();
+  TraceCollectorStats tcs(heap->monitoring_support()->full_stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::degen_gc_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+      /* pauseType = */               "DegeneratedGC", 
+      /* recordAccumulatedGCTime = */ false,
+      /* countPauses = */             false,
+      /* recordIndividualPauses = */  true,
+      /* bool recordDuration = */     true,
+      /* bool recordOperationTime */  false,
+      /* bool recordPauseType */      false,
+      /* cyclePause = */              true);
+
   VM_ShenandoahDegeneratedGC degenerated_gc(this);
   VMThread::execute(&degenerated_gc);
 }

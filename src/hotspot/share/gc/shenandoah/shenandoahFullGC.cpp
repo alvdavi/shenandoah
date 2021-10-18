@@ -41,6 +41,7 @@
 #include "gc/shenandoah/shenandoahHeap.inline.hpp"
 #include "gc/shenandoah/shenandoahHeapRegion.inline.hpp"
 #include "gc/shenandoah/shenandoahMarkingContext.inline.hpp"
+#include "gc/shenandoah/shenandoahMemoryManager.hpp"
 #include "gc/shenandoah/shenandoahMetrics.hpp"
 #include "gc/shenandoah/shenandoahOopClosures.inline.hpp"
 #include "gc/shenandoah/shenandoahReferenceProcessor.hpp"
@@ -140,6 +141,15 @@ void ShenandoahFullGC::vmop_entry_full(GCCause::Cause cause) {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->full_stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::full_gc_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(GLOBAL),
+      /* pauseType = */               "FullGC", 
+      /* recordAccumulatedGCTime = */ false,
+      /* countPauses = */             false,
+      /* recordIndividualPauses = */  true,
+      /* bool recordDuration = */     true,
+      /* bool recordOperationTime */  false,
+      /* bool recordPauseType */      false,
+      /* cyclePause = */              true);
 
   heap->try_inject_alloc_failure();
   VM_ShenandoahFullGC op(cause, this);

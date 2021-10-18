@@ -38,6 +38,7 @@
 #include "gc/shenandoah/shenandoahPhaseTimings.hpp"
 #include "gc/shenandoah/shenandoahReferenceProcessor.hpp"
 #include "gc/shenandoah/shenandoahRootProcessor.inline.hpp"
+#include "gc/shenandoah/shenandoahMemoryManager.hpp"
 #include "gc/shenandoah/shenandoahStackWatermark.hpp"
 #include "gc/shenandoah/shenandoahUtils.hpp"
 #include "gc/shenandoah/shenandoahVerifier.hpp"
@@ -192,6 +193,15 @@ void ShenandoahConcurrentGC::vmop_entry_init_mark() {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::init_mark_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+        /* pauseType = */               "InitMark", 
+        /* recordAccumulatedGCTime = */ false,
+        /* countPauses = */             false,
+        /* recordIndividualPauses = */  true,
+        /* bool recordDuration = */     true,
+        /* bool recordOperationTime */  false,
+        /* bool recordPauseType */      false,
+        /* cyclePause = */              true);
 
   heap->try_inject_alloc_failure();
   VM_ShenandoahInitMark op(this, _do_old_gc_bootstrap);
@@ -202,6 +212,15 @@ void ShenandoahConcurrentGC::vmop_entry_final_mark() {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::final_mark_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+        /* pauseType = */               "FinalMarkStartEvac", 
+        /* recordAccumulatedGCTime = */ false,
+        /* countPauses = */             false,
+        /* recordIndividualPauses = */  true,
+        /* bool recordDuration = */     true,
+        /* bool recordOperationTime */  false,
+        /* bool recordPauseType */      false,
+        /* cyclePause = */              true);
 
   heap->try_inject_alloc_failure();
   VM_ShenandoahFinalMarkStartEvac op(this);
@@ -212,6 +231,15 @@ void ShenandoahConcurrentGC::vmop_entry_init_updaterefs() {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::init_update_refs_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+      /* pauseType = */               "InitUpdateRefs", 
+      /* recordAccumulatedGCTime = */ false,
+      /* countPauses = */             false,
+      /* recordIndividualPauses = */  true,
+      /* bool recordDuration = */     true,
+      /* bool recordOperationTime */  false,
+      /* bool recordPauseType */      false,
+      /* cyclePause = */              true);
 
   heap->try_inject_alloc_failure();
   VM_ShenandoahInitUpdateRefs op(this);
@@ -222,6 +250,15 @@ void ShenandoahConcurrentGC::vmop_entry_final_updaterefs() {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::final_update_refs_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+      /* pauseType = */               "FinalUpdateRefs", 
+      /* recordAccumulatedGCTime = */ false,
+      /* countPauses = */             false,
+      /* recordIndividualPauses = */  true,
+      /* bool recordDuration = */     true,
+      /* bool recordOperationTime */  false,
+      /* bool recordPauseType */      false,
+      /* cyclePause = */              true);
 
   heap->try_inject_alloc_failure();
   VM_ShenandoahFinalUpdateRefs op(this);
@@ -232,6 +269,15 @@ void ShenandoahConcurrentGC::vmop_entry_final_roots() {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   TraceCollectorStats tcs(heap->monitoring_support()->stw_collection_counters());
   ShenandoahTimingsTracker timing(ShenandoahPhaseTimings::final_roots_gross);
+  TraceMemoryManagerPauseStats pause_stats(heap->memory_manager(_generation->generation_mode()),
+      /* pauseType = */               "FinalRoots", 
+      /* recordAccumulatedGCTime = */ false,
+      /* countPauses = */             false,
+      /* recordIndividualPauses = */  true,
+      /* bool recordDuration = */     true,
+      /* bool recordOperationTime */  false,
+      /* bool recordPauseType */      false,
+      /* cyclePause = */              true);
 
   // This phase does not use workers, no need for setup
   heap->try_inject_alloc_failure();

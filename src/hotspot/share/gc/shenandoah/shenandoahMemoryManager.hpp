@@ -50,6 +50,8 @@ public:
   virtual void gc_requested();
   virtual void update_copied_between_pools(jlong copied_before_reset);
   virtual void report_garbage(jlong found, jlong collected);
+  
+  virtual int max_pauses_per_cycle() override { return 4; }
 };
 
 class ShenandoahGlobalMemoryManager : public ShenandoahMemoryManager {

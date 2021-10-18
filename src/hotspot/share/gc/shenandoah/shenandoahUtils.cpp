@@ -91,7 +91,7 @@ ShenandoahGCSession::~ShenandoahGCSession() {
   // }
 }
 
-ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type, GenerationMode generation_mode) :
+ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type, const char* pause_type, GenerationMode generation_mode) :
   _heap(ShenandoahHeap::heap()), _gc_id_mark(gc_id), _svc_gc_mark(type), _is_gc_active_mark() {
   _trace_pause.initialize(_heap->stw_memory_manager(), _heap->gc_cause(),
           /* allMemoryPoolsAffected */    true,
@@ -103,9 +103,15 @@ ShenandoahGCPauseMark::ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_typ
           /* recordGCEndTime = */         true,
           /* countCollection = */         true
   );
-  _trace_gc_pause_stats.initialize(_heap->memory_manager(generation_mode), 
+  _trace_gc_pause_stats.initialize(_heap->memory_manager(generation_mode),
+          /* pauseType = */               pause_type, 
           /* recordAccumulatedGCTime = */ true,
-          /* countPauses = */             true);
+          /* countPauses = */             true,
+          /* recordIndividualPauses = */  true,
+          /* bool recordDuration = */     false,
+          /* bool recordOperationTime */  true,
+          /* bool recordPauseType */      true,
+          /* cyclePause = */              false);
 }
 
 ShenandoahPausePhase::ShenandoahPausePhase(const char* title, ShenandoahPhaseTimings::Phase phase, bool log_heap_usage) :

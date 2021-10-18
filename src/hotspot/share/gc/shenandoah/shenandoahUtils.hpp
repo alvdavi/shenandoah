@@ -142,6 +142,7 @@ private:
 
 public:
   ShenandoahGCPauseMark(uint gc_id, SvcGCMarker::reason_type type,
+                        const char* pause_type,
                         GenerationMode generation_mode);
 };
 
