@@ -31,6 +31,7 @@ import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.OpenDataException;
 import com.sun.management.GcInfo;
+import com.sun.management.PauseInfo;
 import sun.management.Util;
 
 /**
@@ -72,10 +73,11 @@ public class GcInfoBuilder {
     GcInfo getLastGcInfo() {
         MemoryUsage[] usageBeforeGC = new MemoryUsage[poolNames.length];
         MemoryUsage[] usageAfterGC = new MemoryUsage[poolNames.length];
+        PauseInfo[] pauseInfo = new PauseInfo[getMaxPausesPerCycle(gc)];
         Object[] values = new Object[gcExtItemCount];
 
         return getLastGcInfo0(gc, gcExtItemCount, values, gcExtItemTypes,
-                              usageBeforeGC, usageAfterGC);
+                              usageBeforeGC, usageAfterGC, pauseInfo);
     }
 
     public String[] getPoolNames() {
@@ -183,6 +185,9 @@ public class GcInfoBuilder {
                                             char[] types,
                                             String[] descriptions);
 
+    private native int getMaxPausesPerCycle(GarbageCollectorMXBean gc);
+
+
     /**
      * Returns the last GcInfo
      *
@@ -197,5 +202,6 @@ public class GcInfoBuilder {
                                          Object[] extAttValues,
                                          char[] extAttTypes,
                                          MemoryUsage[] before,
-                                         MemoryUsage[] after);
+                                         MemoryUsage[] after,
+                                         PauseInfo[] pauseInfo);
 }

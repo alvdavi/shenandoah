@@ -49,14 +49,16 @@ import java.lang.String;
  * @author Paul Hohensee
  * @since  18
  */
-public class PhaseDetails /*implements CompositeView*/ {
-    private final long index = 0;
-    private final long startTime = 0; // Nanoseconds
-    private final long endTime = 0;   // Nanoseconds
+public interface PhaseInfo {
 
-    protected PhaseDetails() {
-	super();
-    }
+
+    // protected PhaseInfo(long index, long startTime, long endTime) {
+    //     this.index = index;
+    //     this.startTime = startTime;
+    //     this.endTime = endTime;
+    // }
+
+
 
     /**
      * Returns the identifier of this phase, which is the number of
@@ -65,9 +67,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      * @return the identifier of this phase, which is the number of
      *         phases of this type done by this collector
      */
-    public long getId() {
-        return index;
-    }
+    public long getId();
 
     /**
      * The type of this phase. Types are unique across the Java virtual
@@ -75,9 +75,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return a {@code String} representing the type of this pause.
      */
-    public String getPhaseType() {
-        return null;
-    }
+    public String getPhaseType();
 
     /**
      * The approximate start time of this phase in nanoseconds since
@@ -85,9 +83,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the start time of this phase.
      */
-    public long getStartTimeNanos() {
-        return startTime;
-    }
+    public long getStartTimeNanos();
 
     /**
      * The approximate start time of this phase in milliseconds since
@@ -98,8 +94,8 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the start time of this phase.
      */
-    public long getStartTimeMillis() {
-        return startTime / 1000_000L;
+    default public long getStartTimeMillis() {
+        return getStartTimeNanos() / 1000_000L;
     }
 
     /**
@@ -111,8 +107,8 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the start time of this phase.
      */
-    public double getStartTimeSeconds() {
-        return (double)startTime / 1.0e9;
+    default public double getStartTimeSeconds() {
+        return (double)getStartTimeNanos() / 1.0e9;
     }
 
     /**
@@ -121,9 +117,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the end time of this phase.
      */
-    public long getEndTimeNanos() {
-        return endTime;
-    }
+    public long getEndTimeNanos();
 
     /**
      * The approximate end time of this phase in milliseconds since
@@ -134,8 +128,8 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the end time of this phase.
      */
-    public long getEndTimeMillis() {
-        return endTime / 1000_000L;
+    default public long getEndTimeMillis() {
+        return getEndTimeNanos() / 1000_000L;
     }
 
     /**
@@ -147,8 +141,8 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the end time of this phase.
      */
-    public double getEndTimeSeconds() {
-        return (double)endTime / 1.0e9;
+    default public double getEndTimeSeconds() {
+        return (double)getEndTimeNanos() / 1.0e9;
     }
 
     /**
@@ -157,8 +151,8 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the elapsed time of this phase.
      */
-    public long getDurationNanos() {
-        return endTime - startTime;
+    default long getDurationNanos() {
+        return getEndTimeNanos() - getStartTimeNanos();
     }
 
     /**
@@ -171,7 +165,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the elapsed time of this phase.
      */
-    public long getDurationMillis() {
+    default long getDurationMillis() {
         return getEndTimeMillis() - getStartTimeMillis();
     }
 
@@ -186,7 +180,7 @@ public class PhaseDetails /*implements CompositeView*/ {
      *
      * @return the elapsed time of this phase.
      */
-    public double getDurationSeconds() {
+    default double getDurationSeconds() {
         return getEndTimeSeconds() - getStartTimeSeconds();
     }
 
@@ -198,7 +192,5 @@ public class PhaseDetails /*implements CompositeView*/ {
      * @return the number of garbage collection threads used during
      *         this phase.
      */
-    public long getPhaseGarbageCollectorThreadCount() {
-        return 0;
-    }
+    long getPhaseGarbageCollectorThreadCount();
 }

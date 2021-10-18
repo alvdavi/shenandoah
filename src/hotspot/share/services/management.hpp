@@ -48,6 +48,7 @@ private:
   static InstanceKlass*     _garbageCollectorExtImpl_klass;
   static InstanceKlass*     _garbageCollectorMXBean_klass;
   static InstanceKlass*     _gcInfo_klass;
+  static InstanceKlass*     _pauseInfo_klass;
   static InstanceKlass*     _managementFactoryHelper_klass;
   static InstanceKlass*     _memoryManagerMXBean_klass;
   static InstanceKlass*     _memoryPoolMXBean_klass;
@@ -100,6 +101,8 @@ public:
   static InstanceKlass* com_sun_management_internal_GarbageCollectorExtImpl_klass(TRAPS)
       NOT_MANAGEMENT_RETURN_(NULL);
   static InstanceKlass* com_sun_management_GcInfo_klass(TRAPS)
+      NOT_MANAGEMENT_RETURN_(NULL);
+  static InstanceKlass* com_sun_management_PauseInfo_klass(TRAPS)
       NOT_MANAGEMENT_RETURN_(NULL);
   static InstanceKlass* com_sun_management_internal_DiagnosticCommandImpl_klass(TRAPS)
       NOT_MANAGEMENT_RETURN_(NULL);

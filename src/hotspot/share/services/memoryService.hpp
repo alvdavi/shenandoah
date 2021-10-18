@@ -35,6 +35,7 @@
 // Forward declaration
 class MemoryPool;
 class MemoryManager;
+class GCPauseStatInfo;
 class GCMemoryManager;
 class ConcurrentGCMemoryManager;
 class CollectedHeap;
@@ -112,6 +113,8 @@ public:
 
   // Create an instance of java/lang/management/MemoryUsage
   static Handle create_MemoryUsage_obj(MemoryUsage usage, TRAPS);
+  // Create an instance of com/sun/management/PauseInfo
+  static Handle create_PauseInfo_obj(GCPauseStatInfo usage, TRAPS);
 };
 
 class TraceMemoryManagerStats : public StackObj {
@@ -156,17 +159,36 @@ public:
 class TraceMemoryManagerPauseStats : public StackObj {
 private:
   ConcurrentGCMemoryManager* _gc_memory_manager;
+  const char*                _pauseType;
   bool                       _recordAccumulatedPauseTime;
   bool                       _countPauses;
+  bool                       _recordIndividualPauses;
+  bool                       _recordDuration;
+  bool                       _recordOperationTime;
+  bool                       _recordPauseType;
+  bool                       _cyclePause;
+
 public:
   TraceMemoryManagerPauseStats() {}
   TraceMemoryManagerPauseStats(ConcurrentGCMemoryManager* gc_memory_manager,
-                          bool _recordAccumulatedPauseTime = true,
-                          bool _countPauses = true);
+                          const char* pause_type,
+                          bool recordAccumulatedPauseTime = true,
+                          bool countPauses = true,
+                          bool recordIndividualPauses = false, 
+                          bool recordDuration = false,
+                          bool recordOperationTime = false,
+                          bool recordPauseType = false,
+                          bool cyclePause = false);
 
   void initialize(ConcurrentGCMemoryManager* gc_memory_manager,
-                          bool _recordAccumulatedPauseTime,
-                          bool _countPauses);
+                          const char* pause_type,
+                          bool recordAccumulatedPauseTime = true,
+                          bool countPauses = true,
+                          bool recordIndividualPauses = false, 
+                          bool recordDuration = false,
+                          bool recordOperationTime = false,
+                          bool recordPauseType = false,
+                          bool cyclePause = false);
 
   ~TraceMemoryManagerPauseStats();
 };

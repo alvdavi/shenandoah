@@ -143,13 +143,10 @@ GCPauseStatInfo::GCPauseStatInfo() :
   _index(0),
   _start_time(0L),
   _end_time(0L),
-  _threads_notify_time(0L),
-  _threads_suspension_time(0L),
-  _threads_wakeup_time(0L),
-  _threads_lock_acquire_time(0L),
-  _pause_cause(NULL),
-  _pause_type(NULL),
-  _post_operation_cleanup_time(0L)
+  _operation_start_time(0L),
+  _operation_end_time(0L),
+  _pause_type("Unkown"),
+  _max_threads(0L)
   {}
 
 GCStatInfo::GCStatInfo(int num_pools, int max_pauses) {
@@ -386,7 +383,8 @@ size_t GCMemoryManager::get_last_gc_stat(GCStatInfo* dest) {
     assert(dest->pause_array_size() == _last_gc_stat->pause_array_size(),
            "Must have same array size");
     size_t pause_len = _last_gc_stat->pause_array_used() * sizeof(GCPauseStatInfo);
-    memcpy(dest->pause_stat_info(), _last_gc_stat->pause_stat_info(), pause_len);
+    memcpy(dest->pause_stat_info_array(), _last_gc_stat->pause_stat_info_array(), pause_len);
+    dest->set_pause_array_used(_last_gc_stat->pause_array_used());
   }
   return _last_gc_stat->gc_index();
 }
@@ -410,18 +408,63 @@ ConcurrentGCMemoryManager::ConcurrentGCMemoryManager(const char* name, const cha
   _accumulated_pause_timer.reset();
 }
 
-void ConcurrentGCMemoryManager::pause_begin(bool recordAccumulatedPauseTime, bool countPauses) {
+void ConcurrentGCMemoryManager::pause_begin(const char* pauseType, bool recordAccumulatedPauseTime, 
+                     bool countPauses, bool recordIndividualPauses, bool recordDuration, 
+                     bool recordOperationTime, bool recordPauseType, bool cyclePause) {
   if (recordAccumulatedPauseTime) {
     _accumulated_pause_timer.start();
   }
+
+  if (recordIndividualPauses && max_pauses_per_cycle() > 0) {
+    int pause_index = _current_gc_stat->pause_array_used();
+    assert(pause_index < _current_gc_stat->pause_array_size(),
+        "Pause happened beyond the max pauses per cycle defined");
+    GCPauseStatInfo* stat_info = _current_gc_stat->pause_stat_info_array();
+    stat_info[pause_index].set_pause_index(pause_index);
+
+    if (recordDuration) {
+      stat_info[pause_index].set_start_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+
+    if (recordOperationTime) {
+      stat_info[pause_index].set_operation_start_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+
+    if (recordPauseType) {
+      stat_info[pause_index].set_pause_type(pauseType);
+    }
+  }
 }
 
-void ConcurrentGCMemoryManager::pause_end(bool recordAccumulatedPauseTime, bool countPauses) {
+// When recording individualPauses, a call with cyclePause set to true must be done for each pause
+void ConcurrentGCMemoryManager::pause_end(const char* pauseType, bool recordAccumulatedPauseTime, 
+                     bool countPauses, bool recordIndividualPauses, bool recordDuration, 
+                     bool recordOperationTime, bool recordPauseType, bool cyclePause) {
   if (countPauses) {
     _num_pauses++;
   }
   if (recordAccumulatedPauseTime) {
     _accumulated_pause_timer.stop();
+  }
+  if (recordIndividualPauses && max_pauses_per_cycle() > 0) {
+      int pause_index = _current_gc_stat->pause_array_used();
+      assert(pause_index < _current_gc_stat->pause_array_size(),
+        "Pause happened beyond the max pauses per cycle defined");
+    GCPauseStatInfo* stat_info = _current_gc_stat->pause_stat_info_array();
+
+    if (recordDuration) {
+      stat_info[pause_index].set_end_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+
+    if (recordOperationTime) {
+      stat_info[pause_index].set_operation_end_time(Management::ticks_to_ns(Management::timestamp()));
+    }
+
+    // When recording individual pauses, at pause_end must be called at least once with cyclePause true.
+    if (cyclePause) {
+      // Roll to the next pause entry
+      _current_gc_stat->set_pause_array_used(pause_index + 1);
+    }
   }
 }
 

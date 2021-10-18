@@ -132,6 +132,20 @@ static Handle createGcInfo(GCMemoryManager *gcManager, GCStatInfo *gcStatInfo,TR
     usage_after_gc_ah->obj_at_put(i, after_usage());
   }
 
+  // Fill the array of PauseInfo
+  InstanceKlass* pi_klass = Management::com_sun_management_PauseInfo_klass(CHECK_NH);
+
+  objArrayOop pi = oopFactory::new_objArray(pi_klass, gcStatInfo->pause_array_used(), CHECK_NH);
+  objArrayHandle pause_info_ah(THREAD, pi);
+
+  for (int i = 0; i < gcStatInfo->pause_array_used(); i++) {
+    Handle pause_info = MemoryService::create_PauseInfo_obj(gcStatInfo->pause_stat_info_for_index(i), CHECK_NH);
+    pause_info_ah->obj_at_put(i, pause_info());
+  }
+
+  // Convert the pause type
+  Handle cause = java_lang_String::create_from_str(gcStatInfo->get_gc_cause(), CHECK_NH);
+
   // Current implementation only has 1 attribute (number of GC threads)
   // The type is 'I'
   objArrayOop extra_args_array = oopFactory::new_objArray(vmClasses::Integer_klass(), 1, CHECK_NH);
@@ -149,13 +163,25 @@ static Handle createGcInfo(GCMemoryManager *gcManager, GCStatInfo *gcStatInfo,TR
 
   InstanceKlass* gcInfoklass = Management::com_sun_management_GcInfo_klass(CHECK_NH);
 
-  JavaCallArguments constructor_args(16);
+  JavaCallArguments constructor_args(36);
   constructor_args.push_oop(getGcInfoBuilder(gcManager,THREAD));
   constructor_args.push_long(gcStatInfo->gc_index());
-  constructor_args.push_long(Management::ticks_to_ms(gcStatInfo->start_time()));
-  constructor_args.push_long(Management::ticks_to_ms(gcStatInfo->end_time()));
+  constructor_args.push_long(Management::ticks_to_ns(gcStatInfo->start_time()));
+  constructor_args.push_long(Management::ticks_to_ns(gcStatInfo->end_time()));
   constructor_args.push_oop(usage_before_gc_ah);
   constructor_args.push_oop(usage_after_gc_ah);
+  constructor_args.push_oop(cause);
+  constructor_args.push_long(gcStatInfo->get_previous_end_time());
+  constructor_args.push_long(gcStatInfo->get_allocated_since_previous());
+  constructor_args.push_long(gcStatInfo->get_allocated_during_collection());
+  constructor_args.push_long(gcStatInfo->get_copied_between_pools());
+  constructor_args.push_long(gcStatInfo->get_garbage_found());
+  constructor_args.push_long(gcStatInfo->get_garbage_collected());
+  constructor_args.push_long(gcStatInfo->get_live_in_pools_before_gc());
+  constructor_args.push_long(gcStatInfo->get_live_in_pools_after_gc());
+  constructor_args.push_oop(pause_info_ah);
+  constructor_args.push_int(gcStatInfo->pause_array_used());
+  constructor_args.push_int(JNI_TRUE);
   constructor_args.push_oop(extra_array);
 
   return JavaCalls::construct_new_instance(

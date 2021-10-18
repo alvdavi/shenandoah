@@ -26,12 +26,15 @@
 package com.sun.management;
 
 import java.lang.management.MemoryUsage;
+import java.lang.management.MemoryPoolMXBean;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeDataView;
 import javax.management.openmbean.CompositeType;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import com.sun.management.internal.GcInfoCompositeData;
 import com.sun.management.internal.GcInfoBuilder;
@@ -78,18 +81,18 @@ public class GcInfo implements CompositeData, CompositeDataView {
     private final long garbageCollected;
     private final long liveInPoolsBeforeGc;
     private final long liveInPoolsAfterGc;
-    private final boolean valid;
+    private final PauseInfo[] pauseInfoArray;
     private final Object[] extAttributes;
+    private final boolean valid;
     private final CompositeData cdata;
     private final GcInfoBuilder builder;
-
-    
 
     private GcInfo(GcInfoBuilder builder,
                    long index, long startTime, long endTime,
                    MemoryUsage[] muBeforeGc,
                    MemoryUsage[] muAfterGc,
-                   String gcCause, long previousEndTime,
+                   String gcCause, 
+                   long previousEndTime,
                    long allocatedSincePrevious,
                    long allocatedDuringCollection,
                    long copiedBetweenPools,
@@ -97,6 +100,8 @@ public class GcInfo implements CompositeData, CompositeDataView {
                    long garbageCollected,
                    long liveInPoolsBeforeGc,
                    long liveInPoolsAfterGc,
+                   PauseInfo[] pauseInfo,
+                   int pauseInfoSize,
                    boolean valid,
                    Object[] extAttributes) {
         this.builder       = builder;
@@ -119,7 +124,48 @@ public class GcInfo implements CompositeData, CompositeDataView {
         this.garbageCollected = garbageCollected;
         this.liveInPoolsBeforeGc = liveInPoolsBeforeGc;
         this.liveInPoolsAfterGc = liveInPoolsAfterGc;
+        this.pauseInfoArray = new PauseInfo[pauseInfoSize];
+        System.arraycopy(pauseInfo, 0, this.pauseInfoArray, 0, pauseInfoSize);
         this.valid = valid;
+        this.extAttributes = extAttributes;
+        try {
+            this.cdata = new GcInfoCompositeData(this, builder, extAttributes);
+        } catch (Exception e) {
+            System.out.println("Exception");
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    private GcInfo(GcInfoBuilder builder,
+                   long index, long startTime, long endTime,
+                   MemoryUsage[] muBeforeGc,
+                   MemoryUsage[] muAfterGc,
+                   Object[] extAttributes) {
+        this.builder       = builder;
+        this.index         = index;
+        this.startTime     = startTime;
+        this.endTime       = endTime;
+        String[] poolNames = builder.getPoolNames();
+        this.usageBeforeGc = new HashMap<String, MemoryUsage>(poolNames.length);
+        this.usageAfterGc = new HashMap<String, MemoryUsage>(poolNames.length);
+        for (int i = 0; i < poolNames.length; i++) {
+            this.usageBeforeGc.put(poolNames[i],  muBeforeGc[i]);
+            this.usageAfterGc.put(poolNames[i],  muAfterGc[i]);
+        }
+        this.gcCause = "Unknown";
+        this.previousEndTime = 0;
+        this.allocatedSincePrevious = 0;
+        this.allocatedDuringCollection = 0;
+        this.copiedBetweenPools = 0;
+        this.garbageFound = 0;
+        this.garbageCollected = 0;
+        this.liveInPoolsBeforeGc = 0;
+        this.liveInPoolsAfterGc = 0;
+        this.pauseInfoArray = new PauseInfo[1];
+        this.pauseInfoArray[0] = new PauseInfo(10, 20, 30, "Uno", 40, 50, 60);
+        this.valid = false;
         this.extAttributes = extAttributes;
         this.cdata = new GcInfoCompositeData(this, builder, extAttributes);
     }
@@ -144,6 +190,8 @@ public class GcInfo implements CompositeData, CompositeDataView {
         this.liveInPoolsAfterGc        = GcInfoCompositeData.getLiveInPoolsAfterGc(cd);
         this.valid                     = GcInfoCompositeData.isValid(cd);
 
+        this.pauseInfoArray = new PauseInfo[1];
+        this.pauseInfoArray[0] = new PauseInfo(11, 22, 33, "Alpha", 44, 55, 66);
         this.extAttributes = null;
         this.builder       = null;
         this.cdata         = cd;
@@ -551,6 +599,16 @@ public class GcInfo implements CompositeData, CompositeDataView {
     
     public long getAllocatedBetweenEndOfPreviousAndStart() {
         return allocatedSincePrevious;
+    }
+
+    /**
+     * A {@link List} of {@link PauseInfo} for the pauses required during
+     * this collection.
+     *
+     * @return a List of PauseInfo for the pauses during this collection.
+     */
+    public List<PauseInfo> getPauseInfo() {
+        return java.util.Collections.unmodifiableList(Arrays.asList(pauseInfoArray));
     }
 
    /**

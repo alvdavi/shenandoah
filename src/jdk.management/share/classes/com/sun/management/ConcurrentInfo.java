@@ -33,7 +33,7 @@ import javax.management.openmbean.CompositeType;
 import java.lang.String;
 
 /**
- * A {@code ConcurrentDetails} object represents a concurrent phase
+ * A {@code ConcurrentInfo} object represents a concurrent phase
  * within a garbage collection. It includes a timestamp specifying
  * the time since the launch of the Java virtual machine process,
  * the wall clock time duration of the phase, plus additional,
@@ -42,9 +42,41 @@ import java.lang.String;
  * @author Paul Hohensee
  * @since  18
  */
-public class ConcurrentDetails extends PhaseDetails /*implements CompositeView*/ {
+public class ConcurrentInfo implements PhaseInfo /*, CompositeDataView*/ {
+    private final long index;
+    private final long startTime;
+    private final long endTime;
+    private final long threadCount;
 
-    public ConcurrentDetails() {
-	super();
+    public ConcurrentInfo(long index, long startTime, long endTime, long threadCount) {
+	    this.index = index;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.threadCount = threadCount;
+    }
+
+    @Override
+    public String getPhaseType() {
+        return "Concurrent";
+    }
+
+    @Override
+    public long getId() {
+        return index;
+    }
+
+    @Override
+    public long getStartTimeNanos() {
+        return startTime;
+    }
+
+    @Override
+    public long getEndTimeNanos() {
+        return endTime;
+    }
+
+    @Override
+    public long getPhaseGarbageCollectorThreadCount() {
+        return threadCount;
     }
 }

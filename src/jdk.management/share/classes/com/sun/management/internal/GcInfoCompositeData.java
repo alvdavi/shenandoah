@@ -29,7 +29,9 @@ import java.lang.management.MemoryUsage;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.List;
 import java.io.InvalidObjectException;
+import javax.management.openmbean.ArrayType;
 import javax.management.openmbean.CompositeType;
 import javax.management.openmbean.CompositeData;
 import javax.management.openmbean.CompositeDataSupport;
@@ -38,6 +40,7 @@ import javax.management.openmbean.SimpleType;
 import javax.management.openmbean.OpenType;
 import javax.management.openmbean.OpenDataException;
 import com.sun.management.GcInfo;
+import com.sun.management.PauseInfo;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import sun.management.LazyCompositeData;
@@ -139,7 +142,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
                 info.getPreviousEndTimeMillis(),
                 info.getPreviousEndTimeSeconds(),
                 info.getAllocatedDuringCollection(),
-                info.getAllocatedBetweenEndOfPreviousAndStart()
+                info.getAllocatedBetweenEndOfPreviousAndStart(),
+                getPauseInfoOpenDataArray(info.getPauseInfo()),
             };
         } catch (OpenDataException e) {
         
@@ -177,6 +181,14 @@ public class GcInfoCompositeData extends LazyCompositeData {
             // Should never reach here
             throw new AssertionError(e);
         }
+    }
+
+    private CompositeData[] getPauseInfoOpenDataArray(List<PauseInfo> pauseInfoList) {
+        CompositeData[] cda = new CompositeData[pauseInfoList.size()];
+        for (int i = 0; i < pauseInfoList.size(); i++) {
+            cda[i] = pauseInfoList.get(i).toCompositeData(null);
+        }
+        return cda;
     }
 
     private static final String ID                     = "id";
@@ -217,6 +229,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
     private static final String ALLOCATED_DURING_COLLECTION                  = "allocatedDuringCollection";
     private static final String ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START  = "allocatedBetweenEndOfPreviousAndStart";
 
+    private static final String PAUSE_INFO                                   = "pauseInfo";
+
 
     private static final String[] baseGcInfoItemNames = {
         ID,
@@ -254,8 +268,8 @@ public class GcInfoCompositeData extends LazyCompositeData {
         PREVIOUS_END_TIME_MILLIS,
         PREVIOUS_END_TIME_SECONDS,
         ALLOCATED_DURING_COLLECTION,
-        ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START
-        
+        ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START,
+        PAUSE_INFO  
     };
 
 
@@ -270,6 +284,16 @@ public class GcInfoCompositeData extends LazyCompositeData {
             throw new AssertionError(e);
         }
     }
+
+    private static OpenType<?> pauseInfoArrayType;
+     static {
+        try {
+            pauseInfoArrayType = ArrayType.getArrayType(PauseInfoCompositeData.getPauseInfoCompositeType());
+        } catch (OpenDataException e) {
+            // Should never reach here
+            throw new AssertionError(e);
+        } 
+    }   
 
     static String[] getBaseGcInfoItemNames() {
         return baseGcInfoItemNames;
@@ -316,8 +340,9 @@ public class GcInfoCompositeData extends LazyCompositeData {
                 SimpleType.LONG,       // PREVIOUS_END_TIME_MILLIS
                 SimpleType.DOUBLE,     // PREVIOUS_END_TIME_SECONDS
                 SimpleType.LONG,       // ALLOCATED_DURING_COLLECTION
-                SimpleType.LONG,       // ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START    
-                   
+                SimpleType.LONG,       // ALLOCATED_BETWEEN_END_OF_PREVIOUS_AND_START 
+                
+                pauseInfoArrayType,    // PAUSE_INFO
             };
         }
         return baseGcInfoItemTypes;
@@ -456,6 +481,7 @@ public class GcInfoCompositeData extends LazyCompositeData {
             throw new AssertionError(e);
         }
     }
+    
 
 
 
@@ -495,7 +521,9 @@ public class GcInfoCompositeData extends LazyCompositeData {
         return baseGcInfoCompositeType;
     }
 
-    public static double getDouble(CompositeData cd, String itemName) {
+
+
+    private static double getDouble(CompositeData cd, String itemName) {
         if (cd == null)
             throw new IllegalArgumentException("Null CompositeData");
 

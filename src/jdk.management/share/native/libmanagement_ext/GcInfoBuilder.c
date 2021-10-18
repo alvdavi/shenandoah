@@ -42,6 +42,19 @@ JNIEXPORT jint JNICALL Java_com_sun_management_internal_GcInfoBuilder_getNumGcEx
     return (jint) value;
 }
 
+JNIEXPORT jint JNICALL Java_com_sun_management_internal_GcInfoBuilder_getMaxPausesPerCycle
+  (JNIEnv *env, jobject dummy, jobject gc) {
+    jlong value;
+
+    if (gc == NULL) {
+        JNU_ThrowNullPointerException(env, "Invalid GarbageCollectorMXBean");
+        return 0;
+    }
+    value = jmm_interface->GetLongAttribute(env, gc,
+                                            JMM_GC_MAX_PAUSES_PER_CYCLE);
+    return (jint) value;
+}
+
 JNIEXPORT void JNICALL Java_com_sun_management_internal_GcInfoBuilder_fillGcAttributeInfo
   (JNIEnv *env, jobject dummy, jobject gc,
    jint num_attributes, jobjectArray attributeNames,
@@ -199,7 +212,7 @@ static void setCharValueAtObjectArray(JNIEnv *env, jobjectArray array,
 JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLastGcInfo0
   (JNIEnv *env, jobject builder, jobject gc,
    jint ext_att_count, jobjectArray ext_att_values, jcharArray ext_att_types,
-   jobjectArray usageBeforeGC, jobjectArray usageAfterGC) {
+   jobjectArray usageBeforeGC, jobjectArray usageAfterGC, jobjectArray pauseInfo) {
 
     jmmGCStat   gc_stat;
     jchar*      nativeTypes;
@@ -218,6 +231,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLast
 
     gc_stat.usage_before_gc = usageBeforeGC;
     gc_stat.usage_after_gc = usageAfterGC;
+    gc_stat.pause_info = pauseInfo;
     gc_stat.gc_ext_attribute_values_size = ext_att_count;
     if (ext_att_count > 0) {
         gc_stat.gc_ext_attribute_values = (jvalue*) malloc((size_t)ext_att_count *
@@ -302,7 +316,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLast
 
     jobject toReturn = JNU_NewObjectByName(env,
        "com/sun/management/GcInfo",
-       "(Lcom/sun/management/internal/GcInfoBuilder;JJJ[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;Ljava/lang/String;JJJJJJJJZ[Ljava/lang/Object;)V",
+       "(Lcom/sun/management/internal/GcInfoBuilder;JJJ[Ljava/lang/management/MemoryUsage;[Ljava/lang/management/MemoryUsage;Ljava/lang/String;JJJJJJJJ[Lcom/sun/management/PauseInfo;IZ[Ljava/lang/Object;)V",
        builder,
        gc_stat.gc_index,
        gc_stat.start_time,
@@ -318,6 +332,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_management_internal_GcInfoBuilder_getLast
        gc_stat.garbage_collected,
        gc_stat.liveInPoolsBeforeGc,
        gc_stat.liveInPoolsAfterGc,
+       gc_stat.pause_info,
+       gc_stat.num_pauses,
        JNI_TRUE,
        ext_att_values);
 

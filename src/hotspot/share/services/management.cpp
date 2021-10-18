@@ -78,6 +78,7 @@ InstanceKlass* Management::_diagnosticCommandImpl_klass = NULL;
 InstanceKlass* Management::_garbageCollectorExtImpl_klass = NULL;
 InstanceKlass* Management::_garbageCollectorMXBean_klass = NULL;
 InstanceKlass* Management::_gcInfo_klass = NULL;
+InstanceKlass* Management::_pauseInfo_klass = NULL;
 InstanceKlass* Management::_managementFactoryHelper_klass = NULL;
 InstanceKlass* Management::_memoryManagerMXBean_klass = NULL;
 InstanceKlass* Management::_memoryPoolMXBean_klass = NULL;
@@ -285,6 +286,14 @@ InstanceKlass* Management::com_sun_management_GcInfo_klass(TRAPS) {
   }
   return _gcInfo_klass;
 }
+
+InstanceKlass* Management::com_sun_management_PauseInfo_klass(TRAPS) {
+  if (_pauseInfo_klass == NULL) {
+    _pauseInfo_klass = load_and_initialize_klass(vmSymbols::com_sun_management_PauseInfo(), CHECK_NULL);
+  }
+  return _pauseInfo_klass;
+}
+
 
 InstanceKlass* Management::com_sun_management_internal_DiagnosticCommandImpl_klass(TRAPS) {
   if (_diagnosticCommandImpl_klass == NULL) {
@@ -804,7 +813,6 @@ JVM_ENTRY(jboolean, jmm_SetBoolAttribute(JNIEnv *env, jmmBoolAttribute att, jboo
   }
 JVM_END
 
-#if INCLUDE_SHENANDOAHGC
 static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
   switch (att) {
   case JMM_GC_TIME_MS:
@@ -825,22 +833,8 @@ static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
   case JMM_GC_THREADS:
     return mgr->num_gc_threads();
 
-  case JMM_GC_EXT_ATTRIBUTE_INFO_SIZE:
-    return mgr->ext_attribute_info_size();
-
-  default:
-    assert(0, "Unrecognized GC attribute");
-    return -1;
-  }
-}
-#else
-static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
-  switch (att) {
-  case JMM_GC_TIME_MS:
-    return mgr->gc_time_ms();
-
-  case JMM_GC_COUNT:
-    return mgr->gc_count();
+  case JMM_GC_MAX_PAUSES_PER_CYCLE:
+    return mgr->max_pauses_per_cycle();
 
   case JMM_GC_EXT_ATTRIBUTE_INFO_SIZE:
     return mgr->ext_attribute_info_size();
@@ -850,7 +844,6 @@ static jlong get_gc_attribute(GCMemoryManager* mgr, jmmLongAttribute att) {
     return -1;
   }
 }
-#endif // INCLUDE_SHENANDOAHGC
 
 class VmThreadCountClosure: public ThreadClosure {
  private:
@@ -1844,6 +1837,31 @@ static objArrayOop get_memory_usage_objArray(jobjectArray array, int length, TRA
   return array_h();
 }
 
+static objArrayOop get_pause_info_objArray(jobjectArray array, int length, TRAPS) {
+  if (array == NULL) {
+    THROW_(vmSymbols::java_lang_NullPointerException(), 0);
+  }
+
+  objArrayOop oa = objArrayOop(JNIHandles::resolve_non_null(array));
+  objArrayHandle array_h(THREAD, oa);
+
+  // array must be of the given length
+  if (length != array_h->length()) {
+    THROW_MSG_(vmSymbols::java_lang_IllegalArgumentException(),
+               "The length of the given PauseInfo array does not match the number of pauses.", 0);
+  }
+
+  // check if the element of array is of type MemoryUsage class
+  Klass* pause_info_klass = Management::com_sun_management_PauseInfo_klass(CHECK_NULL);
+  Klass* element_klass = ObjArrayKlass::cast(array_h->klass())->element_klass();
+  if (element_klass != pause_info_klass) {
+    THROW_MSG_(vmSymbols::java_lang_IllegalArgumentException(),
+               "The element type is not PauseInfo class", 0);
+  }
+
+  return array_h();
+}
+
 // Gets the statistics of the last GC of a given GC memory manager.
 // Input parameters:
 //   obj     - GarbageCollectorMXBean object
@@ -1902,6 +1920,7 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
   gc_stat->gc_thread_count = stat.get_gc_thread_count();
   gc_stat->liveInPoolsBeforeGc = stat.get_live_in_pools_before_gc();
   gc_stat->liveInPoolsAfterGc = stat.get_live_in_pools_after_gc();
+  gc_stat->num_pauses = stat.pause_array_used();
 
 
   // Current implementation does not have GC extension attributes
@@ -1935,6 +1954,18 @@ JVM_ENTRY(void, jmm_GetLastGCStat(JNIEnv *env, jobject obj, jmmGCStat *gc_stat))
     usage_before_gc_ah->obj_at_put(i, before_usage());
     usage_after_gc_ah->obj_at_put(i, after_usage());
   }
+
+  // Fill the array of PauseInfo
+  objArrayOop pi = get_pause_info_objArray(gc_stat->pause_info, max_pauses, CHECK);
+
+  objArrayHandle pause_info_ah(THREAD, pi);
+
+  for (int i = 0; i < gc_stat->num_pauses; i++) {
+    Handle pause_info = MemoryService::create_PauseInfo_obj(stat.pause_stat_info_for_index(i), CHECK);
+
+    pause_info_ah->obj_at_put(i, pause_info());
+  }
+
 
   if (gc_stat->gc_ext_attribute_values_size > 0) {
     mgr->ext_attribute_values(gc_stat->gc_ext_attribute_values);

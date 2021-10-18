@@ -217,6 +217,28 @@ Handle MemoryService::create_MemoryUsage_obj(MemoryUsage usage, TRAPS) {
                           CHECK_NH);
 }
 
+Handle MemoryService::create_PauseInfo_obj(GCPauseStatInfo info, TRAPS) {
+  InstanceKlass* ik = Management::com_sun_management_PauseInfo_klass(CHECK_NH);
+  
+  Handle pause_type = java_lang_String::create_from_str(info.get_pause_type(), CHECK_NH);
+
+  JavaCallArguments args(14);
+  args.push_long(info.get_pause_index());
+  args.push_long(info.get_start_time());
+  args.push_long(info.get_end_time());
+  args.push_oop(pause_type);
+  args.push_long(info.get_operation_start_time());
+  args.push_long(info.get_operation_end_time());
+  args.push_long(info.get_max_threads());
+
+  return JavaCalls::construct_new_instance(
+                        ik,
+                        vmSymbols::com_sun_management_PauseInfo_constructor_signature(),
+                        &args,
+                        CHECK_NH);
+
+}
+
 TraceMemoryManagerStats::TraceMemoryManagerStats(GCMemoryManager* gc_memory_manager,
                                                  GCCause::Cause cause,
                                                  bool allMemoryPoolsAffected,
@@ -266,21 +288,42 @@ TraceMemoryManagerStats::~TraceMemoryManagerStats() {
 }
 
 TraceMemoryManagerPauseStats::TraceMemoryManagerPauseStats(ConcurrentGCMemoryManager* gc_memory_manager,
+                        const char* pauseType,
                         bool recordAccumulatedPauseTime,
-                        bool countPauses) {
-  initialize(gc_memory_manager, recordAccumulatedPauseTime, countPauses);
+                        bool countPauses,
+                        bool recordIndividualPauses, 
+                        bool recordDuration,
+                        bool recordOperationTime,
+                        bool recordPauseType,
+                        bool cyclePause) {
+  initialize(gc_memory_manager, pauseType, recordAccumulatedPauseTime, countPauses, recordIndividualPauses, 
+             recordDuration, recordOperationTime, recordPauseType, cyclePause);
 }
 
 void TraceMemoryManagerPauseStats::initialize(ConcurrentGCMemoryManager* gc_memory_manager,
+                        const char* pauseType,
                         bool recordAccumulatedPauseTime,
-                        bool countPauses) {
+                        bool countPauses,
+                        bool recordIndividualPauses, 
+                        bool recordDuration,
+                        bool recordOperationTime,
+                        bool recordPauseType,
+                        bool cyclePause) {
   _gc_memory_manager = gc_memory_manager;
+  _pauseType = pauseType;
   _recordAccumulatedPauseTime = recordAccumulatedPauseTime;
   _countPauses = countPauses;
-  _gc_memory_manager->pause_begin(_recordAccumulatedPauseTime, _countPauses);
+  _recordIndividualPauses = recordIndividualPauses;
+  _recordDuration = recordDuration;
+  _recordOperationTime = recordOperationTime;
+  _recordPauseType = recordPauseType;
+  _cyclePause = cyclePause;
+  _gc_memory_manager->pause_begin(_pauseType, _recordAccumulatedPauseTime, _countPauses, _recordIndividualPauses, 
+                                  _recordDuration, _recordOperationTime, _recordPauseType, _cyclePause);
 }
 
 TraceMemoryManagerPauseStats::~TraceMemoryManagerPauseStats() {
-  _gc_memory_manager->pause_end(_recordAccumulatedPauseTime, _countPauses);
+  _gc_memory_manager->pause_end(_pauseType, _recordAccumulatedPauseTime, _countPauses, _recordIndividualPauses, 
+                                  _recordDuration, _recordOperationTime, _recordPauseType, _cyclePause);
 }
 
