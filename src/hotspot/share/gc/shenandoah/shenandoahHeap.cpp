@@ -2142,7 +2142,10 @@ address ShenandoahHeap::gc_state_addr() {
 void ShenandoahHeap::reset_bytes_allocated_since_gc_start() {
   if (mode()->is_generational()) {
     young_generation()->reset_bytes_allocated_since_gc_start();
-    old_generation()->reset_bytes_allocated_since_gc_start();
+    if (!is_concurrent_old_mark_in_progress()) {
+      // Do not reset allocated bytes if we are resuming old marking.
+      old_generation()->reset_bytes_allocated_since_gc_start();
+    }
   }
 
   global_generation()->reset_bytes_allocated_since_gc_start();
